@@ -55,7 +55,7 @@ void increment_matches( int pat, unsigned long *pat_found, unsigned long *pat_le
 	unsigned long ind;	
 	for( ind=0; ind<pat_length[pat]; ind++) {
 		if ( seq_matches[ pat_found[pat] + ind ] == NOT_FOUND )
-			seq_matches[ pat_found[pat] + ind ] = 0;
+			seq_matches[ pat_found[pat] + ind ] = 0; // Probabilmente è un 1
 		else
 			seq_matches[ pat_found[pat] + ind ] ++;
 	}
@@ -335,7 +335,10 @@ int main(int argc, char *argv[]) {
 		MPI_Abort( MPI_COMM_WORLD, EXIT_FAILURE );
 	}
 	random = rng_new( seed );
+	// generazione della sequenza divisa in base ai rank, ognuno genera n/q caratteri
 	generate_rng_sequence( &random, prob_G, prob_C, prob_A, sequence, seq_length);
+
+	// Allgather per condividere con tutti i rank la sequenza completa
 
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
@@ -356,6 +359,7 @@ int main(int argc, char *argv[]) {
 #endif // DEBUG
 
 	/* 2.3.2. Other results related to the main sequence */
+	// Successivamente verrà fatta una AllReduce su seq_matches
 	int *seq_matches;
 	seq_matches = (int *)malloc( sizeof(int) * seq_length );
 	if ( seq_matches == NULL ) {
@@ -364,6 +368,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* 4. Initialize ancillary structures */
+	// Successivamente va fatta una AllGather su pat_found
+	// (forse) Ogni rank resetta solo la sua parte di pat_found
 	for( ind=0; ind<pat_number; ind++) {
 		pat_found[ind] = (unsigned long)NOT_FOUND;
 	}
@@ -372,11 +378,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* 5. Search for each pattern */
+	// Ogni rank calcola la parte di pattern su cui iterare
 	unsigned long start;
 	int pat;
 	for( pat=0; pat < pat_number; pat++ ) {
 
-		/* 5.1. For each posible starting position */
+		/* 5.1. For each possible starting position */
 		for( start=0; start <= seq_length - pat_length[pat]; start++) {
 
 			/* 5.1.1. For each pattern element */
@@ -386,6 +393,7 @@ int main(int argc, char *argv[]) {
 			}
 			/* 5.1.2. Check if the loop ended with a match */
 			if ( lind == pat_length[pat] ) {
+				// Successivamente verrà fatta una AllReduce che sommi pat_matches
 				pat_matches++;
 				pat_found[pat] = start;
 				break;
@@ -400,6 +408,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* 7. Check sums */
+	// Da parallelizzare dividendo i pattern da controllare tra i rank e facendo un modulo alla fine
+	// (controllare se fattibile in base alle proprietà del modulo)
 	unsigned long checksum_matches = 0;
 	unsigned long checksum_found = 0;
 	for( ind=0; ind < pat_number; ind++) {
