@@ -328,6 +328,9 @@ int main(int argc, char *argv[]) {
  * START HERE: DO NOT CHANGE THE CODE ABOVE THIS POINT
  *
  */
+	int num_thread;
+	MPI_Comm_size(MPI_COMM_WORLD,&num_thread);
+
 	/* 2.1. Allocate and fill sequence */
 	char *sequence = (char *)malloc( sizeof(char) * seq_length );
 	if ( sequence == NULL ) {
