@@ -54,7 +54,7 @@ void increment_matches(int pat, unsigned long *pat_found, unsigned long *pat_len
 	for (ind = 0; ind < pat_length[pat]; ind++)
 	{
 		if (seq_matches[pat_found[pat] + ind] == NOT_FOUND)
-			seq_matches[pat_found[pat] + ind] = 1;
+			seq_matches[pat_found[pat] + ind] = 0;
 		else
 			seq_matches[pat_found[pat] + ind]++;
 	}
@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
 	}
 	for (lind = 0; lind < seq_length; lind++)
 	{
-		seq_matches[lind] = 0;
+		seq_matches[lind] = NOT_FOUND;
 	}
 
 	/* 5. Search for each pattern */
