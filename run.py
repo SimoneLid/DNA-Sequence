@@ -1,7 +1,7 @@
 import subprocess
 
-TEST = ["mpi","omp"]  # versioni da eseguire
-NUM_THREADS = ["1","2","4","8"]   # n thread con cui eseguire
+TEST = ["mpi"]  # versioni da eseguire
+NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -65,9 +65,11 @@ for program in TEST:
     for n in NUM_THREADS:
         times[program][n]=[]
         for i in range(10):
-            stdout=subprocess.check_output([f'./align_{program}']+ARGS)
-            time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
-            times[program][n].append(time)
+            if program=="mpi":
+                print("n:",n)
+                stdout=subprocess.check_output(['mpirun','-n',str(n),f'./align_{program}']+ARGS)
+                time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
+                times[program][n].append(time)
 
 print(times)
 write_times(times,"times.txt")
