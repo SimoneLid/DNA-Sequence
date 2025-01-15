@@ -1,0 +1,6 @@
+align_seq
+align_mpi
+align_omp
+align_cuda
+.vscode
+times.txt

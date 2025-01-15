@@ -41,16 +41,16 @@ help:
 
 all: $(OBJS)
 
-align_seq: align.c rng.c
+align_seq: src/align_seq.c src/rng.c
 	$(CC) $(FLAGS) $(DEBUG) $< $(LIBS) -o $@
 
-align_omp: align_omp.c rng.c
+align_omp: src/align_omp.c src/rng.c
 	$(CC) $(FLAGS) $(DEBUG) $(OMPFLAG) $< $(LIBS) -o $@
 
-align_mpi: align_mpi.c rng.c
+align_mpi: src/align_mpi.c src/rng.c
 	$(MPICC) $(FLAGS) $(DEBUG) $< $(LIBS) -o $@
 
-align_cuda: align_cuda.cu rng.c
+align_cuda: src/align_cuda.cu src/rng.c
 	$(CUDACC) $(CUDAFLAGS) $(DEBUG) $< $(LIBS) -o $@
 
 

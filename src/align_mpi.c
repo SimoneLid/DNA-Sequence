@@ -335,7 +335,7 @@ int main(int argc, char *argv[]) {
 		MPI_Abort( MPI_COMM_WORLD, EXIT_FAILURE );
 	}
 	random = rng_new( seed );
-	// generazione della sequenza divisa in base ai rank, ognuno genera n/q caratteri
+	// generazione della sequenza divisa in base ai rank, ognuno genera n/q caratteri considerando q il numero di processi MPI
 	generate_rng_sequence( &random, prob_G, prob_C, prob_A, sequence, seq_length);
 
 	// Allgather per condividere con tutti i rank la sequenza completa
