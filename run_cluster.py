@@ -1,7 +1,9 @@
 import subprocess
+import os.path
+
 
 TEST = ["mpi"]  # versioni da eseguire
-NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
+NUM_MACHINE = ["1","2","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -52,50 +54,31 @@ def write_times(times,filename):
 
 # dict con tutti i tempi
 times={"seq":[]}
-pat_matches_seq = 0
-checksum_found_seq = 0
-checksum_matches_seq = 0
 
 # runna il sequenziale
 for i in range(10):
     print("----------------------------------------------------")
     print("Programma: sequenziale   n thread: 1  iterazione:",i)
     stdout=subprocess.check_output(['./align_seq']+ARGS)
-    time, pat_matches_seq, checksum_found_seq, checksum_matches_seq = convert_stdout(stdout)
+    time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
     times["seq"].append(time)
 
 # runna per gli altri tipi
 for program in TEST:
     times[program]={}
-    for n in NUM_THREADS:
+    for n in NUM_MACHINE:
         times[program][n]=[]
         for i in range(10):
             if program=="mpi":
                 print("----------------------------------------------------")
                 print("Programma:",program,"  n thread:",n," iterazione:",i)
-                stdout=subprocess.check_output(['mpirun','-n',str(n),f'./align_{program}']+ARGS)
-                time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
-                if i==0:
-                    print(f'Pat matches:',pat_matches)
-                    print("checksum_found:",checksum_found)
-                    print("checksum_matches:",checksum_matches)
-                    if pat_matches!=pat_matches_seq or checksum_found!=checksum_found_seq or checksum_matches!=checksum_matches_seq:
-                        print(f'\nErrore!!!\nValori di ritorno non uguali al sequenziale')
+                stdout=subprocess.check_output(['condor_submit',f'job{n}.job'])
+                while(os.path.isfile("logs/out.0")!=True):
+                    continue
+                with open("logs/out.0") as F:
+                    text=F.read()
+                time, pat_matches, checksum_found, checksum_matches = convert_stdout(text)
                 times[program][n].append(time)
 
 print(times)
 write_times(times,"times.txt")
-
-
-
-            
-        
-
-
-    
-
-
-
-
-
-
