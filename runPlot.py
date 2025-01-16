@@ -1,7 +1,8 @@
 import subprocess
+from matplotlib import pyplot as plt
 
 TEST = ["mpi"]  # versioni da eseguire
-NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
+NUM_THREADS = ["1","2","3","4","5","6"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -31,6 +32,7 @@ def convert_stdout(stdout):
     checksum_matches=int(values[5])
     return time,pat_matches,checksum_found,checksum_matches
 
+y_values = []
 # scrivi i tempi medi su file
 def write_times(times,filename):
     with open(filename,"w") as F:
@@ -44,6 +46,7 @@ def write_times(times,filename):
                     curr_mean_time=round(sum(l)/len(l),TIME_ROUND)
                     F.write(n+": "+str(curr_mean_time))
                     F.write("     speedup:"+str(round(mean_seq/curr_mean_time,TIME_ROUND)))
+                    y_values.append(round(mean_seq/curr_mean_time,TIME_ROUND))
                     F.write("\n")
             F.write("--------------------------------\n")
     return
@@ -73,14 +76,18 @@ for program in TEST:
 
 print(times)
 write_times(times,"times.txt")
-
-
+x_values = [int(x) for x in NUM_THREADS]
+plt.plot(x_values,y_values, marker='o')
+plt.xlabel("numero thread")
+plt.ylabel("speed up")
+plt.show()
 
             
         
 
 
     
+
 
 
 

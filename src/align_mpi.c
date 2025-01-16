@@ -476,7 +476,6 @@ int main(int argc, char *argv[])
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : pat_found, pat_found, pat_number, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : seq_matches, seq_matches, seq_length, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &pat_matches, &pat_matches, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-	fflush(stdout);
 
 	/*if (rank == 0)
 {
