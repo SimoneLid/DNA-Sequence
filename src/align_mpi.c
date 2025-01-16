@@ -384,8 +384,11 @@ int main(int argc, char *argv[])
 
 	/*La generazione della sequenza potremmo non parallelizzarla, data la scomodità del funzionamento dei seed, inoltre,
 	potrebbe essere troppo costoso l'overhead di una allgather di una sequenza molto lunga fra tutti i thread*/
-	generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
-	// Allgather per condividere con tutti i rank la sequenza completa
+	if(rank==0){
+		generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
+	}
+	// Broadcast per condividere con tutti i rank la sequenza completa
+	MPI_Bcast(sequence,seq_length,MPI_CHAR,0,MPI_COMM_WORLD);
 
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */

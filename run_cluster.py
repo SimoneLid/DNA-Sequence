@@ -1,5 +1,5 @@
 import subprocess
-import os.path
+import os
 
 
 TEST = ["mpi"]  # versioni da eseguire
@@ -7,7 +7,7 @@ NUM_MACHINE = ["1","2","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
-SEQ_LENGTH='1000000'
+SEQ_LENGTH='10000'
 PROB_G='0.35'
 PROB_C='0.2'
 PROB_A='0.25'
@@ -33,6 +33,14 @@ def convert_stdout(stdout):
     checksum_matches=int(values[5])
     return time,pat_matches,checksum_found,checksum_matches
 
+def convert_mpi_output(text):
+    values=text.split()
+    time=float(values[1])
+    pat_matches=int(values[3].replace(",",""))
+    checksum_found=int(values[4].replace(",",""))
+    checksum_matches=int(values[5])
+    return time,pat_matches,checksum_found,checksum_matches
+
 # scrivi i tempi medi su file
 def write_times(times,filename):
     with open(filename,"w") as F:
@@ -40,11 +48,11 @@ def write_times(times,filename):
             if k=="seq":
                 mean_seq=round(sum(e)/len(e),TIME_ROUND)
                 F.write(k+": "+str(mean_seq)+"\n")
-            else:
+            elif k=="mpi":
                 F.write(k+"\n")
                 for n,l in e.items():
                     curr_mean_time=round(sum(l)/len(l),TIME_ROUND)
-                    F.write(n+": "+str(curr_mean_time))
+                    F.write(n*32+": "+str(curr_mean_time))
                     F.write("     speedup:"+str(round(mean_seq/curr_mean_time,TIME_ROUND)))
                     F.write("\n")
             F.write("--------------------------------\n")
@@ -71,13 +79,14 @@ for program in TEST:
         for i in range(10):
             if program=="mpi":
                 print("----------------------------------------------------")
-                print("Programma:",program,"  n thread:",n," iterazione:",i)
+                print("Programma:",program,"  n rank:",n*32," iterazione:",i)
                 stdout=subprocess.check_output(['condor_submit',f'job{n}.job'])
                 while(os.path.isfile("logs/out.0")!=True):
                     continue
                 with open("logs/out.0") as F:
                     text=F.read()
-                time, pat_matches, checksum_found, checksum_matches = convert_stdout(text)
+                os.remove("logs/out.0")
+                time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
                 times[program][n].append(time)
 
 print(times)
