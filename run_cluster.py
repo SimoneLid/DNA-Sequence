@@ -3,7 +3,9 @@ import os
 
 
 TEST = ["mpi"]  # versioni da eseguire
-NUM_MACHINE = ["4"]   # n thread con cui eseguire
+NUM_ITER = 10
+NUM_MACHINE = ["4"]   # n nodi cluster con cui eseguire (ognuno con 32 core)
+NUM_THREAD_OMP = ["4","16","32"]   # n thread OpenMP con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -64,30 +66,42 @@ def write_times(times,filename):
 times={"seq":[]}
 
 # runna il sequenziale
-for i in range(10):
+for i in range(NUM_ITER):
     print("----------------------------------------------------")
     print("Programma: sequenziale   n thread: 1  iterazione:",i)
     stdout=subprocess.check_output(['./align_seq']+ARGS)
     time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
     times["seq"].append(time)
 
-# runna per gli altri tipi
-for program in TEST:
-    times[program]={}
+# runna mpi
+if "mpi" in TEST:
+    times["mpi"]={}
     for n in NUM_MACHINE:
-        times[program][n]=[]
-        for i in range(10):
-            if program=="mpi":
-                print("----------------------------------------------------")
-                print("Programma:",program,"  n rank:",32*int(n)," iterazione:",i)
-                stdout=subprocess.check_output(['condor_submit',f'jobs/job{n}.job'])
-                while(os.path.isfile("logs/out.0")!=True):
-                    continue
-                with open("logs/out.0") as F:
-                    text=F.read()
-                os.remove("logs/out.0")
-                time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
-                times[program][n].append(time)
+        times["mpi"][n]=[]
+        for i in range(NUM_ITER):
+            print("----------------------------------------------------")
+            print("Programma: mpi  n rank:",32*int(n)," iterazione:",i)
+            stdout=subprocess.check_output(['condor_submit',f'jobs/job{n}.job'])
+            while(os.path.isfile("logs/out.0")!=True):
+                continue
+            with open("logs/out.0") as F:
+                text=F.read()
+            os.remove("logs/out.0")
+            time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
+            times["mpi"][n].append(time)
+
+# runna omp
+if "omp" in TEST:
+    times["omp"]={}
+    for n in NUM_THREAD_OMP:
+        os.system('export OMP_NUM_THREADS={n}')
+        for i in range(NUM_ITER):
+            print("----------------------------------------------------")
+            print("Programma: mpi  n rank:",32*int(n)," iterazione:",i)
+            stdout=subprocess.check_output(['./align_omp']+ARGS)
+            time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
+            times["omp"][n].append(time)
+
 
 print(times)
 write_times(times,"times.txt")
