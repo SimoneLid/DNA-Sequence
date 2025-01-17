@@ -1,7 +1,9 @@
 import subprocess
+import os
 
-TEST = ["mpi"]  # versioni da eseguire
-NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
+TEST = ["omp"]  # versioni da 
+NUM_ITER = 10
+NUM_THREADS = ["1","2"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -57,9 +59,9 @@ checksum_found_seq = 0
 checksum_matches_seq = 0
 
 # runna il sequenziale
-for i in range(10):
+for i in range(NUM_ITER):
     print("----------------------------------------------------")
-    print("Programma: sequenziale   n thread: 1  iterazione:",i)
+    print("Programma: sequenziale   iterazione:",i)
     stdout=subprocess.check_output(['./align_seq']+ARGS)
     time, pat_matches_seq, checksum_found_seq, checksum_matches_seq = convert_stdout(stdout)
     times["seq"].append(time)
@@ -69,19 +71,21 @@ for program in TEST:
     times[program]={}
     for n in NUM_THREADS:
         times[program][n]=[]
-        for i in range(10):
+        for i in range(NUM_ITER):
+            print("----------------------------------------------------")
+            print("Programma:",program,"  n thread:",n," iterazione:",i)
             if program=="mpi":
-                print("----------------------------------------------------")
-                print("Programma:",program,"  n thread:",n," iterazione:",i)
                 stdout=subprocess.check_output(['mpirun','-n',str(n),f'./align_{program}']+ARGS)
-                time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
-                if i==0:
-                    print(f'Pat matches:',pat_matches)
-                    print("checksum_found:",checksum_found)
-                    print("checksum_matches:",checksum_matches)
-                    if pat_matches!=pat_matches_seq or checksum_found!=checksum_found_seq or checksum_matches!=checksum_matches_seq:
-                        print(f'\nErrore!!!\nValori di ritorno non uguali al sequenziale')
-                times[program][n].append(time)
+            elif program=="omp":
+                stdout=subprocess.check_output(['./align_omp']+ARGS+[n])
+            time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
+            if i==0:
+                print(f'Pat matches:',pat_matches)
+                print("checksum_found:",checksum_found)
+                print("checksum_matches:",checksum_matches)
+                if pat_matches!=pat_matches_seq or checksum_found!=checksum_found_seq or checksum_matches!=checksum_matches_seq:
+                    print(f'\nErrore!!!\nValori di ritorno non uguali al sequenziale')
+            times[program][n].append(time)
 
 print(times)
 write_times(times,"times.txt")

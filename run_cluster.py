@@ -2,7 +2,7 @@ import subprocess
 import os
 
 
-TEST = ["mpi"]  # versioni da eseguire
+TEST = ["omp"]  # versioni da eseguire
 NUM_ITER = 10
 NUM_MACHINE = ["4"]   # n nodi cluster con cui eseguire (ognuno con 32 core)
 NUM_THREAD_OMP = ["4","16","32"]   # n thread OpenMP con cui eseguire
@@ -50,11 +50,11 @@ def write_times(times,filename):
             if k=="seq":
                 mean_seq=round(sum(e)/len(e),TIME_ROUND)
                 F.write(k+": "+str(mean_seq)+"\n")
-            elif k=="mpi":
+            else:
                 F.write(k+"\n")
                 for n,l in e.items():
                     curr_mean_time=round(sum(l)/len(l),TIME_ROUND)
-                    F.write(32*int(n)+": "+str(curr_mean_time))
+                    F.write(n+": "+str(curr_mean_time))
                     F.write("     speedup:"+str(round(mean_seq/curr_mean_time,TIME_ROUND)))
                     F.write("\n")
             F.write("--------------------------------\n")
@@ -68,7 +68,7 @@ times={"seq":[]}
 # runna il sequenziale
 for i in range(NUM_ITER):
     print("----------------------------------------------------")
-    print("Programma: sequenziale   n thread: 1  iterazione:",i)
+    print("Programma: sequenziale   iterazione:",i)
     stdout=subprocess.check_output(['./align_seq']+ARGS)
     time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
     times["seq"].append(time)
@@ -77,7 +77,7 @@ for i in range(NUM_ITER):
 if "mpi" in TEST:
     times["mpi"]={}
     for n in NUM_MACHINE:
-        times["mpi"][n]=[]
+        times["mpi"][str(32*int(n))]=[]
         for i in range(NUM_ITER):
             print("----------------------------------------------------")
             print("Programma: mpi  n rank:",32*int(n)," iterazione:",i)
@@ -94,11 +94,11 @@ if "mpi" in TEST:
 if "omp" in TEST:
     times["omp"]={}
     for n in NUM_THREAD_OMP:
-        os.system('export OMP_NUM_THREADS={n}')
+        times["omp"][n]=[]
         for i in range(NUM_ITER):
             print("----------------------------------------------------")
-            print("Programma: mpi  n rank:",32*int(n)," iterazione:",i)
-            stdout=subprocess.check_output(['./align_omp']+ARGS)
+            print("Programma: omp  n rank:",n," iterazione:",i)
+            stdout=subprocess.check_output(['./align_omp']+ARGS+[n])
             time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
             times["omp"][n].append(time)
 
