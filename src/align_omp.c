@@ -211,6 +211,12 @@ int main(int argc, char *argv[])
 
 	unsigned long seed = atol(argv[14]);
 
+	if (argc == 16)
+	{
+		if (atoi(argv[15]) >= 1)
+			omp_set_num_threads(atoi(argv[15]));
+	}
+
 #ifdef DEBUG
 	/* DEBUG: Print arguments */
 	printf("\nArguments: seq_length=%lu\n", seq_length);
