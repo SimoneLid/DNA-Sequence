@@ -88,7 +88,7 @@ if "mpi" in TEST:
                 text=F.read()
             os.remove("logs/out.0")
             time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
-            times["mpi"][n].append(time)
+            times["mpi"][str(32*int(n))].append(time)
 
 # runna omp
 if "omp" in TEST:

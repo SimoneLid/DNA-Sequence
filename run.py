@@ -1,9 +1,8 @@
 import subprocess
-import os
 
-TEST = ["omp"]  # versioni da 
+TEST = ["omp","mpi"]  # versioni da 
 NUM_ITER = 10
-NUM_THREADS = ["1","2"]   # n thread con cui eseguire
+NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS

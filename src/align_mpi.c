@@ -380,7 +380,6 @@ int main(int argc, char *argv[])
 		MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	}
 	random = rng_new(seed);
-	// generazione della sequenza divisa in base ai rank, ognuno genera n/q caratteri considerando q il numero di processi MPI
 
 	/*La generazione della sequenza potremmo non parallelizzarla, data la scomodità del funzionamento dei seed, inoltre,
 	potrebbe essere troppo costoso l'overhead di una allgather di una sequenza molto lunga fra tutti i thread*/
@@ -411,7 +410,7 @@ int main(int argc, char *argv[])
 #endif // DEBUG
 
 	/* 2.3.2. Other results related to the main sequence */
-	// Successivamente verrà fatta una AllReduce su seq_matches
+	// Successivamente verrà fatta una Reduce su seq_matches
 	int *seq_matches;
 	seq_matches = (int *)calloc(sizeof(int), seq_length);
 	if (seq_matches == NULL)
@@ -421,9 +420,6 @@ int main(int argc, char *argv[])
 	}
 
 	/* 4. Initialize ancillary structures */
-	// Successivamente va fatta una AllGather su pat_found
-	// (forse) Ogni rank resetta solo la sua parte di pat_found
-
 	// Ogni rank calcola la parte di pattern su cui iterare
 	int pat_per_thread = ceil((float)pat_number / num_thread);
 	int pat_start = rank * (pat_per_thread);
@@ -436,10 +432,7 @@ int main(int argc, char *argv[])
 		else
 			pat_found[ind] = 0;
 	}
-	/*for (lind = 0; lind < seq_length; lind++)
-	{
-		seq_matches[lind] = 0;
-	}*/
+	
 
 	/* 5. Search for each pattern */
 	unsigned long start;
@@ -481,23 +474,8 @@ int main(int argc, char *argv[])
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : seq_matches, seq_matches, seq_length, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &pat_matches, &pat_matches, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-	/*if (rank == 0)
-{
-
-	fflush(stdout);
-	printf("rank %d\n[ ", rank);
-	for (int i = 0; i < pat_number; i++)
-	{
-		printf("%d, ", pat_found[i]);
-	}
-	printf(" ]\n");
-	fflush(stdout);
-}*/
 
 	/* 7. Check sums */
-	// Da parallelizzare dividendo i pattern da controllare tra i rank e facendo un modulo alla fine
-	// (controllare se fattibile in base alle proprietà del modulo)
-
 	unsigned long checksum_matches = 0;
 	unsigned long checksum_found = 0;
 	// Questa cosa deve farla solo il rank zero
