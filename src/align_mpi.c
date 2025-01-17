@@ -384,11 +384,12 @@ int main(int argc, char *argv[])
 
 	/*La generazione della sequenza potremmo non parallelizzarla, data la scomodità del funzionamento dei seed, inoltre,
 	potrebbe essere troppo costoso l'overhead di una allgather di una sequenza molto lunga fra tutti i thread*/
-	if(rank==0){
+	if (rank == 0)
+	{
 		generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
 	}
 	// Broadcast per condividere con tutti i rank la sequenza completa
-	MPI_Bcast(sequence,seq_length,MPI_CHAR,0,MPI_COMM_WORLD);
+	MPI_Bcast(sequence, seq_length, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
@@ -412,7 +413,7 @@ int main(int argc, char *argv[])
 	/* 2.3.2. Other results related to the main sequence */
 	// Successivamente verrà fatta una AllReduce su seq_matches
 	int *seq_matches;
-	seq_matches = (int *)malloc(sizeof(int) * seq_length);
+	seq_matches = (int *)calloc(sizeof(int), seq_length);
 	if (seq_matches == NULL)
 	{
 		fprintf(stderr, "\n-- Error allocating aux sequence structures for size: %lu\n", seq_length);
@@ -435,10 +436,10 @@ int main(int argc, char *argv[])
 		else
 			pat_found[ind] = 0;
 	}
-	for (lind = 0; lind < seq_length; lind++)
+	/*for (lind = 0; lind < seq_length; lind++)
 	{
 		seq_matches[lind] = 0;
-	}
+	}*/
 
 	/* 5. Search for each pattern */
 	unsigned long start;
@@ -496,17 +497,22 @@ int main(int argc, char *argv[])
 	/* 7. Check sums */
 	// Da parallelizzare dividendo i pattern da controllare tra i rank e facendo un modulo alla fine
 	// (controllare se fattibile in base alle proprietà del modulo)
+
 	unsigned long checksum_matches = 0;
 	unsigned long checksum_found = 0;
-	for (ind = 0; ind < pat_number; ind++)
+	// Questa cosa deve farla solo il rank zero
+	if (rank == 0)
 	{
-		if (pat_found[ind] != (unsigned long)NOT_FOUND)
-			checksum_found = (checksum_found + pat_found[ind]) % CHECKSUM_MAX;
-	}
-	for (lind = 0; lind < seq_length; lind++)
-	{
-		if (seq_matches[lind] != NOT_FOUND)
-			checksum_matches = (checksum_matches + seq_matches[lind]) % CHECKSUM_MAX;
+		for (ind = 0; ind < pat_number; ind++)
+		{
+			if (pat_found[ind] != (unsigned long)NOT_FOUND)
+				checksum_found = (checksum_found + pat_found[ind]) % CHECKSUM_MAX;
+		}
+		for (lind = 0; lind < seq_length; lind++)
+		{
+			if (seq_matches[lind] != NOT_FOUND)
+				checksum_matches = (checksum_matches + seq_matches[lind]) % CHECKSUM_MAX;
+		}
 	}
 
 #ifdef DEBUG

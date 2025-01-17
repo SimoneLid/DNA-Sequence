@@ -2,7 +2,7 @@ import subprocess
 from matplotlib import pyplot as plt
 
 TEST = ["mpi"]  # versioni da eseguire
-NUM_THREADS = ["1","2","3","4","5","6"]   # n thread con cui eseguire
+NUM_THREADS = ["1","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -81,16 +81,3 @@ plt.plot(x_values,y_values, marker='o')
 plt.xlabel("numero thread")
 plt.ylabel("speed up")
 plt.show()
-
-            
-        
-
-
-    
-
-
-
-
-
-
-

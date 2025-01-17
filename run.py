@@ -5,7 +5,7 @@ NUM_THREADS = ["1","2","4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
-SEQ_LENGTH='1000000'
+SEQ_LENGTH='10000'
 PROB_G='0.35'
 PROB_C='0.2'
 PROB_A='0.25'

@@ -3,7 +3,7 @@ import os
 
 
 TEST = ["mpi"]  # versioni da eseguire
-NUM_MACHINE = ["1","2","4"]   # n thread con cui eseguire
+NUM_MACHINE = ["4"]   # n thread con cui eseguire
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -52,7 +52,7 @@ def write_times(times,filename):
                 F.write(k+"\n")
                 for n,l in e.items():
                     curr_mean_time=round(sum(l)/len(l),TIME_ROUND)
-                    F.write(n*32+": "+str(curr_mean_time))
+                    F.write(32*int(n)+": "+str(curr_mean_time))
                     F.write("     speedup:"+str(round(mean_seq/curr_mean_time,TIME_ROUND)))
                     F.write("\n")
             F.write("--------------------------------\n")
@@ -79,8 +79,8 @@ for program in TEST:
         for i in range(10):
             if program=="mpi":
                 print("----------------------------------------------------")
-                print("Programma:",program,"  n rank:",n*32," iterazione:",i)
-                stdout=subprocess.check_output(['condor_submit',f'job{n}.job'])
+                print("Programma:",program,"  n rank:",32*int(n)," iterazione:",i)
+                stdout=subprocess.check_output(['condor_submit',f'jobs/job{n}.job'])
                 while(os.path.isfile("logs/out.0")!=True):
                     continue
                 with open("logs/out.0") as F:
