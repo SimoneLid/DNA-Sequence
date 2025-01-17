@@ -4,3 +4,4 @@ align_omp
 align_cuda
 .vscode
 times.txt
+*.synctex.gz
