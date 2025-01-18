@@ -80,18 +80,20 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
-void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long length)
+void generate_rng_sequence_parallel(unsigned long seed, float prob_G, float prob_C, float prob_A, char *seq, unsigned long length)
 {
-#pragma omp parallel firstprivate(random)
+#pragma omp parallel
 	{
-		int seq_per_thread = ceil((float)length / omp_get_num_threads());
-		int seq_start = omp_get_thread_num() * (seq_per_thread);
-		rng_skip(random, seq_start);
-		// il suo rng skip
+		// random privato
+		rng_t random = rng_new(seed);
+		unsigned long seq_per_thread = ceil((float)length / omp_get_num_threads());
+		unsigned long seq_start = omp_get_thread_num() * (seq_per_thread);
+		rng_skip(&random, seq_start);
+
 		unsigned long ind;
 		for (ind = seq_start; (ind < length) && (ind < seq_start + seq_per_thread); ind++)
 		{
-			double prob = rng_next(random);
+			double prob = rng_next(&random);
 			if (prob < prob_G)
 				seq[ind] = 'G';
 			else if (prob < prob_C)
@@ -397,8 +399,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	random = rng_new(seed);
-	generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
+	// random = rng_new(seed);
+	generate_rng_sequence_parallel(seed, prob_G, prob_C, prob_A, sequence, seq_length);
+
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
 	printf("-----------------\n");

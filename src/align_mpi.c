@@ -80,7 +80,7 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
-void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long seq_length, int seq_start, int seq_per_thread)
+void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long seq_length, unsigned long seq_start, unsigned long seq_per_thread)
 {
 	unsigned long ind;
 	rng_skip(random, seq_start);
@@ -398,9 +398,8 @@ int main(int argc, char *argv[])
 	}
 	random = rng_new(seed);
 
-	int seq_per_thread = ceil((float)seq_length / num_thread);
-	int seq_start = rank * (seq_per_thread);
-	// printf("rank %d seq start %d seq per thread %d\n", rank, seq_start, seq_per_thread);
+	unsigned long seq_per_thread = ceil((float)seq_length / num_thread);
+	unsigned long seq_start = rank * (seq_per_thread);
 	generate_rng_sequence_parallel(&random, prob_G, prob_C, prob_A, sequence, seq_length, seq_start, seq_per_thread);
 	MPI_Allreduce(MPI_IN_PLACE, sequence, seq_length, MPI_CHAR, MPI_SUM, MPI_COMM_WORLD);
 
