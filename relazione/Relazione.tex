@@ -1,0 +1,64 @@
+\documentclass[12pt,openany]{report}
+\def\tit{DNA Sequence}
+\date{\today}
+\makeatletter
+\let\datename\@date
+\makeatother
+\def\authorname{Simone Lidonnici - (2061343)\\Marco Casu - (2041262)}
+
+
+
+%Include------------------------------------------------
+\usepackage[italian]{babel}
+\usepackage[paper=a4paper,left=20mm,right=20mm,bottom=25mm,top=25mm]{geometry}
+\usepackage{graphicx}
+\usepackage{bookmark}
+\usepackage[listings,breakable]{tcolorbox}
+\tcbuselibrary{skins}
+\usepackage{fancyhdr}
+\usepackage[absolute,overlay]{textpos}
+%-------------------------------------------------------
+
+
+
+
+%Stile pagina
+\raggedbottom
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\ifnum\value{chapter}>0{\nouppercase{\rightmark}}\fi}
+\fancyfoot[C]{\thepage}
+%------------------------------------------------
+
+
+
+\definecolor{Sapienza}{RGB}{131,31,48}
+
+
+\begin{document}
+%INIZIO PRIMA PAGINA
+\begin{titlepage}
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{images/Sapienza_logo.png}
+    \end{center}
+    \centering\Large \textbf{\color{Sapienza}{Facoltà di Ingegneria dell'Informazione, Informatica e Statistica\\Dipartimento di Informatica}}
+    \vspace{4cm}
+    \begin{tcolorbox}[enhanced, width=\textwidth, colframe=Sapienza, colback=white, halign=flush center, sharp corners=all, boxrule=1mm, bottom=5mm, top=5mm]
+        \Huge\textbf{\tit}
+    \end{tcolorbox}
+    \begin{textblock*}{\textwidth}[0.5,0](0.5\pdfpagewidth,20cm)
+        \centering\large\textbf{Autori:}\\\authorname
+    \end{textblock*}
+    \vfill
+    \centering\large\datename
+\end{titlepage}
+%FINE PRIMA PAGINA
+
+
+
+
+
+
+
+\end{document}
