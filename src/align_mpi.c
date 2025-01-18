@@ -80,6 +80,23 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
+void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long seq_length, int seq_start, int seq_per_thread)
+{
+	unsigned long ind;
+	rng_skip(random, seq_start);
+	for (ind = seq_start; (ind < seq_start + seq_per_thread) && (ind < seq_length); ind++)
+	{
+		double prob = rng_next(random);
+		if (prob < prob_G)
+			seq[ind] = 'G';
+		else if (prob < prob_C)
+			seq[ind] = 'C';
+		else if (prob < prob_A)
+			seq[ind] = 'A';
+		else
+			seq[ind] = 'T';
+	}
+}
 
 /*
  * Function: Copy a sample of the sequence
@@ -381,14 +398,11 @@ int main(int argc, char *argv[])
 	}
 	random = rng_new(seed);
 
-	/*La generazione della sequenza potremmo non parallelizzarla, data la scomodità del funzionamento dei seed, inoltre,
-	potrebbe essere troppo costoso l'overhead di una allgather di una sequenza molto lunga fra tutti i thread*/
-	if (rank == 0)
-	{
-		generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
-	}
-	// Broadcast per condividere con tutti i rank la sequenza completa
-	MPI_Bcast(sequence, seq_length, MPI_CHAR, 0, MPI_COMM_WORLD);
+	int seq_per_thread = ceil((float)seq_length / num_thread);
+	int seq_start = rank * (seq_per_thread);
+	// printf("rank %d seq start %d seq per thread %d\n", rank, seq_start, seq_per_thread);
+	generate_rng_sequence_parallel(&random, prob_G, prob_C, prob_A, sequence, seq_length, seq_start, seq_per_thread);
+	MPI_Allreduce(MPI_IN_PLACE, sequence, seq_length, MPI_CHAR, MPI_SUM, MPI_COMM_WORLD);
 
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
@@ -432,7 +446,6 @@ int main(int argc, char *argv[])
 		else
 			pat_found[ind] = 0;
 	}
-	
 
 	/* 5. Search for each pattern */
 	unsigned long start;
@@ -473,7 +486,6 @@ int main(int argc, char *argv[])
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : pat_found, pat_found, pat_number, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : seq_matches, seq_matches, seq_length, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &pat_matches, &pat_matches, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
 
 	/* 7. Check sums */
 	unsigned long checksum_matches = 0;

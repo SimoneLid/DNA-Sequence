@@ -163,6 +163,7 @@ void show_usage(char *program_name)
  */
 int main(int argc, char *argv[])
 {
+
 	/* 0. Default output and error without buffering, forces to write immediately */
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);

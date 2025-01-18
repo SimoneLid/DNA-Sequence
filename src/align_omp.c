@@ -80,6 +80,29 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
+void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long length)
+{
+#pragma omp parallel firstprivate(random)
+	{
+		int seq_per_thread = ceil((float)length / omp_get_num_threads());
+		int seq_start = omp_get_thread_num() * (seq_per_thread);
+		rng_skip(random, seq_start);
+		// il suo rng skip
+		unsigned long ind;
+		for (ind = seq_start; (ind < length) && (ind < seq_start + seq_per_thread); ind++)
+		{
+			double prob = rng_next(random);
+			if (prob < prob_G)
+				seq[ind] = 'G';
+			else if (prob < prob_C)
+				seq[ind] = 'C';
+			else if (prob < prob_A)
+				seq[ind] = 'A';
+			else
+				seq[ind] = 'T';
+		}
+	}
+}
 
 /*
  * Function: Copy a sample of the sequence
@@ -376,7 +399,6 @@ int main(int argc, char *argv[])
 
 	random = rng_new(seed);
 	generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
-
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
 	printf("-----------------\n");
