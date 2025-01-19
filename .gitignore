@@ -5,3 +5,7 @@ align_cuda
 .vscode
 times.txt
 *.synctex.gz
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
