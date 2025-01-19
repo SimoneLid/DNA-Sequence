@@ -77,11 +77,46 @@ sono stati tentati due approcci\begin{itemize}
     \item 
 Si è inizialmente provato a far generare l'intera sequenza ad un solo processo, per poi eseguire una \texttt{Broadcast}, condividendola a tutti gli altri processi. Tale versione si è rivelata più veloce della versione iniziale (in cui ogni rank genera autonomamente la sequenza) ma comunque più lenta della versione sequenziale.
 \item  La seconda opzione, presente nel file finale, è stata quella di dividere la sequenza tra i vari rank, nello stesso modo in cui vengono divisi i pattern e poi eseguire una $\texttt{MPI\_Allreduce}$ per far avere a tutti i rank la sequenza completa. Data la natura puramente sequenziale delle funzioni rng, ogni rank esegue un $\texttt{rng\_skip}$ per poter iniziare a generare i suoi numeri random da un punto avanzato della sequenza.\end{itemize}
-Di seguito si può vedere il grafico dei tempi in relazione al numero di processi MPI, i test sono stati eseguiti con il numero massimo di processi su un nodo (32) e aumentando i nodi progressivamente:
-%\includegraphics{images/tempi_MPI.pdf}
-In seguito è riportato anche il grafico dello speedup:
-%\includegraphics{images/speedup_MPI.pdf}
-Se si vogliono consultare le informazioni in maniera più pratica, si può controllare la seguente tabella:
+Di seguito si può vedere il grafico dei tempi e dello speed up in relazione al numero di processi MPI, i test sono stati eseguiti con il numero massimo di processi su un nodo (32) e aumentando i nodi progressivamente:\begin{center}
+    \includegraphics[width=0.48\textwidth ]{images/tempi_MPI.pdf}
+    \includegraphics[width=0.48\textwidth ]{images/speedup_MPI.pdf}
+\end{center}
+L'esecuzione sequenziale (non riportata nel grafico) ha impiegato 71.26 secondi.
+Se si vogliono consultare le informazioni in maniera più pratica, si può controllare la seguente tabella.\begin{center}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \rowcolor[HTML]{EFEFEF} 
+        numero di thread & tempo     & speedup    \\ \hline
+        sequenziale      & 71.273433 & 1          \\ \hline
+        32               & 2.710399  & 26.270071  \\ \hline
+        64               & 1.57978   & 45.071069  \\ \hline
+        96               & 1.101432  & 64.645275  \\ \hline
+        128              & 0.837877  & 84.979507  \\ \hline
+        160              & 0.948968  & 75.031375  \\ \hline
+        192              & 0.6894    & 103.281657 \\ \hline
+        224              & 1.063436  & 66.955016  \\ \hline
+        256              & 1.161095  & 61.32347   \\ \hline
+        \end{tabular}
+\end{center}
+\textbf{Nota} : il tempo medio per l'esecuzione con 256 rank risulta maggiore al tempo medio con 96 rank, anche se il caso migliore risulta più rapido, non è chiaro se l'aleatoreità delle differenze di tempo fra differenti esecuzioni del programma sia dovuta al sovraccarico del cluster,  sono riportati qui sotto i grafici e la tabella dei tempi di esecuzione nei \textit{casi migliori}:\begin{center}
+    \begin{tabular}{|c|c|}
+        \hline
+        \rowcolor[HTML]{EFEFEF} 
+        numero di thread & tempo     \\ \hline
+        sequenziale      & 71.273433 \\ \hline
+        32               & 2.297742  \\ \hline
+        64               & 1.193476  \\ \hline
+        96               & 0.826267  \\ \hline
+        128              & 0.788565  \\ \hline
+        160              & 0.636911  \\ \hline
+        192              & 0.526974  \\ \hline
+        224              & 0.503687  \\ \hline
+        256              & 0.449722  \\ \hline
+        \end{tabular}\\ 
+        \includegraphics[width=0.6\textwidth ]{images/tempi_MPI_bestcase.pdf}
+\end{center}
+Si noti come nel caso migliore, all'aumentare dei thread il tempo va sempre diminuendo.
+
 
 
 \newpage
@@ -111,7 +146,7 @@ Si osservi come la decrescita del tempo impiegato a terminare il programma è in
         32                & 2.939143  & 24.241052 \\ \hline
         \end{tabular}
 \end{center}
-
+Si noti come a parità di processi (nel caso con 32 thread), l'esecuzione parallela in MPI risulta più efficiente rispetto quella in OpenMP.
 
 
 \end{document}
