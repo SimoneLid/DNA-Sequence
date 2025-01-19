@@ -48,11 +48,15 @@ def write_times(times,filename):
     with open(filename,"w") as F:
         for k,e in times.items():
             if k=="seq":
+                e.sort()
+                e=e[1:NUM_ITER-1]
                 mean_seq=round(sum(e)/len(e),TIME_ROUND)
                 F.write(k+": "+str(mean_seq)+"\n")
             else:
                 F.write(k+"\n")
                 for n,l in e.items():
+                    l.sort()
+                    l=l[1:NUM_ITER-1]
                     curr_mean_time=round(sum(l)/len(l),TIME_ROUND)
                     F.write(n+": "+str(curr_mean_time))
                     F.write("     speedup:"+str(round(mean_seq/curr_mean_time,TIME_ROUND)))
