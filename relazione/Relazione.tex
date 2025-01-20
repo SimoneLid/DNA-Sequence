@@ -101,22 +101,8 @@ Se si vogliono consultare le informazioni in maniera più pratica, si può contr
         256              & 1.16  & 61.32  & 0.23 \\ \hline
     \end{tabular}
 \end{center}
-\textbf{Nota} : il tempo medio per l'esecuzione con 256 rank risulta maggiore al tempo medio con 96 rank, anche se il caso migliore risulta più rapido, non è chiaro se l'aleatoreità delle differenze di tempo fra differenti esecuzioni del programma sia dovuta al sovraccarico del cluster, sono riportati qui sotto i grafici e la tabella dei tempi di esecuzione nei \textit{casi migliori}:
+\textbf{Nota} : il tempo medio per l'esecuzione con 256 rank risulta maggiore al tempo medio con 96 rank, anche se il caso migliore risulta più rapido, non è chiaro se l'aleatoreità delle differenze di tempo fra differenti esecuzioni del programma sia dovuta al sovraccarico del cluster,è riportato il grafico dei tempi nei \textit{casi migliori}:
 \begin{center}
-    \begin{tabular}{|c|c|c|c|}
-        \hline
-        \rowcolor[HTML]{EFEFEF} 
-        numero di processi & tempo& speedup & efficienza  \\ \hline
-        sequenziale      & 71.27 & 1 & 1\\ \hline
-        32               & 2.29  & 31.01 & 0.96\\ \hline
-        64               & 1.19  & 59.71 & 0.93\\ \hline
-        96               & 0.82  & 86.91 & 0.90\\ \hline
-        128              & 0.78  & 91.37 & 0.71\\ \hline
-        160              & 0.63  & 113.13 & 0.70\\ \hline
-        192              & 0.52  & 137.06 & 0.71\\ \hline
-        224              & 0.50  & 142.54 & 0.63\\ \hline
-        256              & 0.44  & 161.98 & 0.63\\ \hline
-    \end{tabular}\\ 
     \includegraphics[width=0.6\textwidth ]{images/tempi_MPI_bestcase.pdf}
 \end{center}
 Si noti come nel caso migliore, all'aumentare dei thread il tempo va sempre diminuendo.
