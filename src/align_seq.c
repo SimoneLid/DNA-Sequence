@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* 7. Check sums */
+		/* 7. Check sums */
 	unsigned long checksum_matches = 0;
 	unsigned long checksum_found = 0;
 	for (ind = 0; ind < pat_number; ind++)

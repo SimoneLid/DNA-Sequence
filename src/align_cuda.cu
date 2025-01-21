@@ -1,5 +1,4 @@
 /*PROBLEMA : SEMBRA FUNZIONARE MA IL CHECKSUM DI SEQ_MATCHES NON FUNZIONA*/
-
 /*
  * Exact genetic sequence alignment
  * (Using brute force)
@@ -80,36 +79,24 @@ __global__ void readPattern(char **d_pattern, int pat_length)
 	}
 	printf("\n");
 }
-__global__ void readPatNum(int *a)
-{
-
-	printf("pat num : %d\n", a[0]);
-}
 
 /*
  * Function: Increment the number of pattern matches on the sequence positions
  * 	This function can be changed and/or optimized by the students
  */
+
 __device__ void increment_matches(int pat, unsigned long *pat_found, unsigned long *pat_length, int *seq_matches)
 {
 	unsigned long ind;
 	for (ind = 0; ind < pat_length[pat]; ind++)
 	{
-		if (seq_matches[pat_found[pat] + ind] == NOT_FOUND)
-			seq_matches[pat_found[pat] + ind] = 1;
-		else
-			seq_matches[pat_found[pat] + ind]++;
+		seq_matches[pat_found[pat] + ind]++;
 	}
 }
-__global__ void identifies()
+__global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_length, unsigned long *pat_length, char *sequence, char **pattern, unsigned long *pat_found, int **seq_matches_array, int *pat_matches_device)
 {
-	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-	int totalThreads = gridDim.x * blockDim.x;
-	printf("thread num : %d    id : %d\n", totalThreads, thread_id);
-}
-__global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_length, unsigned long *pat_length, char *sequence, char **pattern, unsigned long *pat_found, int *seq_matches, int *pat_matches_device)
-{
-
+	int counter2 = 0;
+	int counter = 0;
 	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 	int num_thread = gridDim.x * blockDim.x;
 
@@ -123,13 +110,11 @@ __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_
 	{
 		if (pat_start <= i && i < pat_end)
 			pat_found[i] = (unsigned long)NOT_FOUND;
-		else
-			pat_found[i] = 0;
 	}
 
 	unsigned long start;
 	int pat;
-	int lind;
+	unsigned long lind;
 	for (pat = pat_start; pat < pat_end; pat++)
 	{
 		// printf("pat_lenght[%d]=%ld\n", pat, pat_length[pat]);
@@ -155,14 +140,17 @@ __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_
 		}
 
 		/* 5.2. Pattern found */
+		counter2++;
 		if (pat_found[pat] != (unsigned long)NOT_FOUND)
 		{
 			/* 4.2.1. Increment the number of pattern matches on the sequence positions */
-			increment_matches(pat, pat_found, pat_length, seq_matches);
+			// printf("DENTRO IL FOR %d : %d\n", thread_id, seq_matches_array[thread_id]);
+			counter++;
+			increment_matches(pat, pat_found, pat_length, seq_matches_array[thread_id]);
 		}
 	}
-
-	// printf("thread %d pat matches : %d\n", thread_id, pat_matches_device[thread_id]);
+	// printf("id : %d  counter 1 : %d  counter 2 : %d \n", thread_id, counter, counter2);
+	//  printf("thread %d pat matches : %d\n", thread_id, pat_matches_device[thread_id]);
 }
 /*
  *
@@ -266,8 +254,9 @@ void show_usage(char *program_name)
  */
 int main(int argc, char *argv[])
 {
-	int thread_block_dim = 50;
-	int thread_grid_dim = 30;
+	int thread_block_dim = 20;
+	int thread_grid_dim = 20;
+
 	/* 0. Default output and error without buffering, forces to write immediately */
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);
@@ -563,15 +552,42 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	int **seq_matches_array_in_host = (int **)calloc(sizeof(int *) * thread_block_dim, thread_grid_dim);
+	int **seq_matches_array_in_device;
+	CUDA_CHECK_FUNCTION(cudaMalloc(&seq_matches_array_in_device, sizeof(int *) * thread_block_dim * thread_grid_dim));
+	if (seq_matches_array_in_host == NULL)
+	{
+		fprintf(stderr, "\n-- Error allocating the patterns structures replicated in the host for size: %d\n", pat_number);
+		exit(EXIT_FAILURE);
+	}
+	for (ind = 0; ind < thread_block_dim * thread_grid_dim; ind++)
+	{
+		CUDA_CHECK_FUNCTION(cudaMalloc(&(seq_matches_array_in_host[ind]), sizeof(int *) * seq_length));
+	}
+	CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches_array_in_device, seq_matches_array_in_host, thread_block_dim * thread_grid_dim * sizeof(int *), cudaMemcpyHostToDevice));
+	cudaDeviceSynchronize();
 	/* 5. Search for each pattern */
+	search_for_patterns<<<thread_grid_dim, thread_block_dim>>>(pat_number, seq_length, d_pat_length, d_sequence, d_pattern, d_pat_found, seq_matches_array_in_device, pat_matches_device);
 
-	search_for_patterns<<<thread_grid_dim, thread_block_dim>>>(pat_number, seq_length, d_pat_length, d_sequence, d_pattern, d_pat_found, d_seq_matches, pat_matches_device);
 	//  identifies<<<100, 40>>>();
 	cudaDeviceSynchronize();
 
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_found, d_pat_found, pat_number * sizeof(unsigned long), cudaMemcpyDeviceToHost));
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_matches_host, pat_matches_device, thread_block_dim * thread_grid_dim * sizeof(int), cudaMemcpyDeviceToHost));
-	CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches, d_seq_matches, seq_length * sizeof(int), cudaMemcpyDeviceToHost));
+
+	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
+	{
+		// printf("pointer %d : %d \n", i, seq_matches_array_in_host[i]);
+		int *seq_matches_tmp = (int *)calloc(sizeof(int), seq_length);
+		CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches_tmp, seq_matches_array_in_host[i], seq_length * sizeof(int), cudaMemcpyDeviceToHost));
+		// printf("ID : %d = ", i);
+		for (unsigned long j = 0; j < seq_length; j++)
+		{
+			// printf("%d ", seq_matches_tmp[j]);
+			seq_matches[j] += seq_matches_tmp[j];
+		}
+		// printf("\n");
+	}
 
 	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
 	{
