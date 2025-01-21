@@ -90,10 +90,10 @@ __device__ void increment_matches(int pat, unsigned long *pat_found, unsigned lo
 	unsigned long ind;
 	for (ind = 0; ind < pat_length[pat]; ind++)
 	{
-		seq_matches[pat_found[pat] + ind]++;
+		atomicAdd(&seq_matches[pat_found[pat] + ind], 1);
 	}
 }
-__global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_length, unsigned long *pat_length, char *sequence, char **pattern, unsigned long *pat_found, int **seq_matches_array, int *pat_matches_device)
+__global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_length, unsigned long *pat_length, char *sequence, char **pattern, unsigned long *pat_found, int *seq_matches, int *pat_matches_device)
 {
 	int counter2 = 0;
 	int counter = 0;
@@ -146,7 +146,7 @@ __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_
 			/* 4.2.1. Increment the number of pattern matches on the sequence positions */
 			// printf("DENTRO IL FOR %d : %d\n", thread_id, seq_matches_array[thread_id]);
 			counter++;
-			increment_matches(pat, pat_found, pat_length, seq_matches_array[thread_id]);
+			increment_matches(pat, pat_found, pat_length, seq_matches);
 		}
 	}
 	// printf("id : %d  counter 1 : %d  counter 2 : %d \n", thread_id, counter, counter2);
@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
 	{
 		fprintf(stderr, "\n-- Error allocating the patterns structures replicated in the host for size: %d\n", pat_number);
 		exit(EXIT_FAILURE);
-	}
+	} // a
 	for (ind = 0; ind < pat_number; ind++)
 	{
 		CUDA_CHECK_FUNCTION(cudaMalloc(&(d_pattern_in_host[ind]), sizeof(char *) * pat_length[ind]));
@@ -488,7 +488,7 @@ int main(int argc, char *argv[])
 
 	int *pat_matches_device; //(int *)malloc(sizeof(int) * thread_block_dim * thread_grid_dim);
 
-	cudaMalloc((void **)&pat_matches_device, sizeof(int *) * thread_block_dim * thread_grid_dim);
+	CUDA_CHECK_FUNCTION(cudaMalloc((void **)&pat_matches_device, sizeof(int *) * thread_block_dim * thread_grid_dim));
 	unsigned long *d_pat_number;
 
 	// Allocazione della memoria sul device
@@ -496,14 +496,6 @@ int main(int argc, char *argv[])
 
 	// Copia del numero dall'host al device
 	CUDA_CHECK_FUNCTION(cudaMemcpy(d_pat_number, &pat_number, sizeof(unsigned long), cudaMemcpyHostToDevice));
-
-	unsigned long *d_seq_lenght;
-
-	// Allocazione della memoria sul device
-	CUDA_CHECK_FUNCTION(cudaMalloc(&d_seq_lenght, sizeof(unsigned long)));
-
-	// Copia del numero dall'host al device
-	CUDA_CHECK_FUNCTION(cudaMemcpy(d_seq_lenght, &seq_length, sizeof(unsigned long), cudaMemcpyHostToDevice));
 
 	random = rng_new(seed);
 	generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
@@ -552,30 +544,32 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	int **seq_matches_array_in_host = (int **)calloc(sizeof(int *) * thread_block_dim, thread_grid_dim);
-	int **seq_matches_array_in_device;
-	CUDA_CHECK_FUNCTION(cudaMalloc(&seq_matches_array_in_device, sizeof(int *) * thread_block_dim * thread_grid_dim));
-	if (seq_matches_array_in_host == NULL)
-	{
-		fprintf(stderr, "\n-- Error allocating the patterns structures replicated in the host for size: %d\n", pat_number);
-		exit(EXIT_FAILURE);
-	}
-	for (ind = 0; ind < thread_block_dim * thread_grid_dim; ind++)
-	{
-		CUDA_CHECK_FUNCTION(cudaMalloc(&(seq_matches_array_in_host[ind]), sizeof(int *) * seq_length));
-	}
-	CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches_array_in_device, seq_matches_array_in_host, thread_block_dim * thread_grid_dim * sizeof(int *), cudaMemcpyHostToDevice));
-	cudaDeviceSynchronize();
 	/* 5. Search for each pattern */
-	search_for_patterns<<<thread_grid_dim, thread_block_dim>>>(pat_number, seq_length, d_pat_length, d_sequence, d_pattern, d_pat_found, seq_matches_array_in_device, pat_matches_device);
+	search_for_patterns<<<thread_grid_dim, thread_block_dim>>>(pat_number, seq_length, d_pat_length, d_sequence, d_pattern, d_pat_found, d_seq_matches, pat_matches_device);
 
 	//  identifies<<<100, 40>>>();
-	cudaDeviceSynchronize();
+	CUDA_CHECK_FUNCTION(cudaDeviceSynchronize());
 
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_found, d_pat_found, pat_number * sizeof(unsigned long), cudaMemcpyDeviceToHost));
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_matches_host, pat_matches_device, thread_block_dim * thread_grid_dim * sizeof(int), cudaMemcpyDeviceToHost));
+	CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches, d_seq_matches, sizeof(int) * seq_length, cudaMemcpyDeviceToHost));
 
-	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
+	// FREE
+	CUDA_CHECK_FUNCTION(cudaFree(d_pat_length));
+	CUDA_CHECK_FUNCTION(cudaFree(d_pattern));
+	CUDA_CHECK_FUNCTION(cudaFree(pat_matches_device));
+	CUDA_CHECK_FUNCTION(cudaFree(d_pat_number));
+	CUDA_CHECK_FUNCTION(cudaFree(d_sequence));
+	CUDA_CHECK_FUNCTION(cudaFree(d_pat_found));
+	CUDA_CHECK_FUNCTION(cudaFree(d_seq_matches));
+	// CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_device));
+
+	for (int i = 0; i < pat_number; i++)
+	{
+		CUDA_CHECK_FUNCTION(cudaFree(d_pattern_in_host[i]));
+	}
+	// CUDA_CHECK_FUNCTION(cudaFree());
+	/*for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
 	{
 		// printf("pointer %d : %d \n", i, seq_matches_array_in_host[i]);
 		int *seq_matches_tmp = (int *)calloc(sizeof(int), seq_length);
@@ -587,28 +581,11 @@ int main(int argc, char *argv[])
 			seq_matches[j] += seq_matches_tmp[j];
 		}
 		// printf("\n");
-	}
+	}*/
 
 	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
 	{
 		pat_matches += pat_matches_host[i];
-	}
-
-	CUDA_CHECK_FUNCTION(cudaFree(d_pat_length));
-	CUDA_CHECK_FUNCTION(cudaFree(d_pattern));
-	CUDA_CHECK_FUNCTION(cudaFree(pat_matches_device));
-	CUDA_CHECK_FUNCTION(cudaFree(d_pat_number));
-	CUDA_CHECK_FUNCTION(cudaFree(d_sequence));
-	CUDA_CHECK_FUNCTION(cudaFree(d_pat_found));
-	CUDA_CHECK_FUNCTION(cudaFree(d_seq_matches));
-	CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_device));
-	for (int i = 0; i < seq_length; i++)
-	{
-		// CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_host[i]));
-	}
-	for (int i = 0; i < pat_number; i++)
-	{
-		// CUDA_CHECK_FUNCTION(cudaFree(d_pattern_in_host[i]));
 	}
 
 	/* 7. Check sums */
