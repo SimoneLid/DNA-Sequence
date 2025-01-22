@@ -4,7 +4,7 @@
 \makeatletter
 \let\datename\@date
 \makeatother
-\def\authorname{Simone Lidonnici - (2061343)\\Marco Casu - (2041262)}
+\def\authorname{Simone Lidonnici - (2061343)\\Marco Casu - (2046212)}
 
 
 
@@ -141,4 +141,35 @@ Si osservi come la decrescita del tempo impiegato a terminare il programma è in
 Si noti come a parità di processi (nel caso con 32 thread), l'esecuzione parallela in MPI risulta più efficiente rispetto quella in OpenMP.
 
 
+\newpage 
+\section{CUDA}
+In CUDA, la logica della parallelizzazione è la medesima, si presenta però un problema non di poco conto\begin{itemize}
+    \item Nelle implementazioni MPI ed OpenMP, ogni thread possiede una copia privata degli array \texttt{seq\_matches} e \texttt{pat\_found}. Il numero dei thread è nell'ordine delle centinaia, quindi, ciò non causa problemi dal punto di vista della memoria anche quando gli array sono di grandi dimensioni, inoltre, essendo eseguiti sulla CPU, c'è la possibilità di fare paginazione
+    \item nel caso di CUDA, i CUDAcores sono nell'ordine delle migliaia, e la memoria della GPU è limitata, quindi in caso di grandi dimensioni per gli array prima menzionati, vi è il rischio che la memoria venga esaurita
+\end{itemize} 
+A tal proposito, piuttosto che fornire ad ogni thread una versione locale di  \texttt{seq\_matches} e \texttt{pat\_found}, è possibile avere una versione globale condivisa, su cui la scrittura deve essere resa sequenziale per evitare race condition. È stata tentata un'implementazione di questo tipo, ma la sequenzializzazione della scrittura comporta un'abbassamento delle performance notevole, rendendo il programma ben più lento della versione sequenziale.\bigskip 
+
+È stata quindi adoperata la versione in cui ogni thread ha una versione privata degli array, dato che la memoria disponibile è sufficiente a permettere l'esecuzione del programma sugli input utilizzati per i test da noi adottati.\bigskip 
+
+Di seguito si può vedere il grafico dei tempi e dello speedup in relazione al numero di thread, i test sono stati eseguiti aumentando progressivamente il numero di blocchi nella griglia, mantenendo costante il numero di thread nel blocco (precisamente, 64):
+\begin{center}
+    \includegraphics[width=0.42\textwidth ]{images/tempiCUDA.pdf}
+    \includegraphics[width=0.53\textwidth ]{images/speedupCUDA.pdf}
+\end{center}\newpage
+Come nel caso di MPI, ad un certo punto l'aggiunta di thread non causa alcun beneficio nelle performance. Se si vogliono consultare le informazioni in maniera più pratica, si può controllare la seguente tabella:
+\begin{center}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \rowcolor[HTML]{EFEFEF} 
+        numero di thread & tempo     & speedup \\ \hline
+        sequenziale      & 71.273433 & 1       \\ \hline
+        256              & 40.43     & 1.76    \\ \hline
+        512              & 14.31     & 4.98    \\ \hline
+        1024             & 11.99     & 5.98    \\ \hline
+        2048             & 6.58      & 10.83   \\ \hline
+        4608             & 8.16      & 8.73    \\ \hline
+        \end{tabular}
+\end{center}
+\newpage 
+\section{MPI + OpenMP}
 \end{document}
