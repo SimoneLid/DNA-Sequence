@@ -53,6 +53,8 @@ align_mpi: src/align_mpi.c src/rng.c
 align_cuda: src/align_cuda.cu src/rng.c
 	$(CUDACC) $(CUDAFLAGS) $(DEBUG) $< $(LIBS) -o $@
 
+align_mpi_omp: src/align_mpi_omp.c src/rng.c
+	$(MPICC) $(FLAGS) $(DEBUG) $(OMPFLAG) $< $(LIBS) -o $@
 
 # Remove the target files
 clean:

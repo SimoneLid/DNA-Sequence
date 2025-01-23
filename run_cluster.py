@@ -2,10 +2,12 @@ import subprocess
 import os
 
 
-TEST = ["omp"]  # versioni da eseguire
+TEST = ["mpi_omp"]  # versioni da eseguire
 NUM_ITER = 10
 NUM_MACHINE = ["4"]   # n nodi cluster con cui eseguire (ognuno con 32 core)
 NUM_THREAD_OMP = ["4","16","32"]   # n thread OpenMP con cui eseguire
+NUM_MACHINE_FINAL = ["1","2","3","4","5","6","7","8"]  # n nodi del test finale
+NUM_THREAD_FINAL = ["4","8","12","16","20","24","28"]  # n thread test final
 TIME_ROUND=6   # cifre decimali dei tempi
 
 # ARGS
@@ -105,6 +107,37 @@ if "omp" in TEST:
             stdout=subprocess.check_output(['./align_omp']+ARGS+[n])
             time, pat_matches, checksum_found, checksum_matches = convert_stdout(stdout)
             times["omp"][n].append(time)
+
+# runna il file finale
+if "mpi_omp" in TEST:
+    times["mpi_omp"]={}
+    for n in NUM_MACHINE_FINAL:
+        times["mpi_omp"][n+"x32"]=[]
+        for i in range(NUM_ITER):
+            print("----------------------------------------------------")
+            print("Programma: mpi+omp  n rank:",n+"x32"," iterazione:",i)
+            stdout=subprocess.check_output(['condor_submit',f'jobs/jobsMix/jobM{n}.job'])
+            while(os.path.isfile("logs/out.0")!=True):
+                continue
+            with open("logs/out.0") as F:
+                text=F.read()
+            os.remove("logs/out.0")
+            time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
+            times["mpi_omp"][n+"x32"].append(time)
+
+    for n in NUM_THREAD_FINAL:
+        times["mpi_omp"]["8x"+n]=[]
+        for i in range(NUM_ITER):
+            print("----------------------------------------------------")
+            print("Programma: mpi+omp  n rank:","8x"+n," iterazione:",i)
+            stdout=subprocess.check_output(['condor_submit',f'jobs/jobsMix/jobT{n}.job'])
+            while(os.path.isfile("logs/out.0")!=True):
+                continue
+            with open("logs/out.0") as F:
+                text=F.read()
+            os.remove("logs/out.0")
+            time, pat_matches, checksum_found, checksum_matches = convert_mpi_output(text)
+            times["mpi_omp"]["8x"+n].append(time)
 
 
 print(times)

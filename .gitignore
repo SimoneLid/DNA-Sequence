@@ -2,6 +2,7 @@ align_seq
 align_mpi
 align_omp
 align_cuda
+align_mpi_omp
 .vscode
 times.txt
 *.synctex.gz
