@@ -172,4 +172,50 @@ Come nel caso di MPI, ad un certo punto l'aggiunta di thread non causa alcun ben
 \end{center}
 \newpage 
 \section{MPI + OpenMP}
+Per l'implementazione mista, abbiamo adottato la seguente procedura\begin{itemize}
+    \item Ogni nodo sul cluster avvia un processo MPI 
+    \item Per ogni nodo, quindi per ogni processo MPI, ci sono più thread openMP (che verranno parallelamente schedulati sui diversi core del processore presente sul nodo)
+\end{itemize}
+Su ogni nodo, i thread condivideranno una versione locale di \texttt{pat\_found}, le riduzioni quindi, avverranno fra nodi differenti, si noti come \begin{itemize}
+    \item nella versione MPI, se ci sono 32 rank, la riduzione coinvolgerà 32 array 
+    \item nella versione MPI+OpenMP, ad esempio, con 8 rank e thread per processo, la riduzione coinvolgerà solamente 8 array (presenti sui differenti nodi)
+\end{itemize}
+Sono state eseguite due trance differenti di test\begin{itemize}
+    \item nella prima trance, si è lasciato fisso il numero di thread OpenMP a 32, e si è aumentato progressivamente il numero di nodi (rank MPI)
+    \item nella seconda trance, sono stati fissati 8 nodi (rank MPI), e sono stati variati i thread OpenMP
+\end{itemize}
+La progressione del numero dei thread totali è identica fra le due trance. In seguito sono riportati i grafici dei tempi delle due trance:
+\begin{center}
+    \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_M.pdf}
+    \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_T.pdf}
+\end{center}
+I due grafici a confronto, in blu la seconda trance, in arancione la prima:
+\begin{center}
+    \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_MT.pdf}
+\end{center}
+È riportato ora il grafico dello speedup
+\begin{center}
+    \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_M.pdf}
+    \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_T.pdf}
+\end{center}
+I due grafici a confronto, in blu la seconda trance, in arancione la prima:
+\begin{center}
+    \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_MT.pdf}
+\end{center}
+È riportata la tabella dei tempi e dello speed up:\begin{center}
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \rowcolor[HTML]{EFEFEF} 
+        numero totale thread & tempo trance 1 & \cellcolor[HTML]{EFEFEF}tempo trance 2 & speed up trance 1 & speed up trance 2 \\ \hline
+        sequenziale          & 71.273433      & 71.273433                              & 1                 & 1                 \\ \hline
+        32                   & 3.442785       & 2.536871                               & 20.701264         & 28.093663         \\ \hline
+        64                   & 1.808318       & 1.328219                               & 39.412316         & 53.65832          \\ \hline
+        96                   & 1.264207       & 1.000262                               & 56.375261         & 71.251332         \\ \hline
+        128                  & 1.088805       & 0.840287                               & 65.457084         & 84.816259         \\ \hline
+        160                  & 0.854102       & 0.748569                               & 83.444366         & 95.208324         \\ \hline
+        192                  & 0.755196       & 0.668694                               & 94.372852         & 106.580888        \\ \hline
+        224                  & 0.698206       & 0.751871                               & 102.075892        & 94.790197         \\ \hline
+        256                  & 0.646928       & 0.646928                               & 110.166819        & 110.166819        \\ \hline
+        \end{tabular}
+\end{center}
 \end{document}
