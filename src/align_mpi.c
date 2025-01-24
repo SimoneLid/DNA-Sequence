@@ -80,6 +80,8 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
+
+/*Versione parallela della generazione della sequenza, ogni rank genera una parte differente della sequenza*/
 void generate_rng_sequence_parallel(rng_t *random, float prob_G, float prob_C, float prob_A, char *seq, unsigned long seq_length, unsigned long seq_start, unsigned long seq_per_thread)
 {
 	unsigned long ind;
@@ -398,8 +400,11 @@ int main(int argc, char *argv[])
 	}
 	random = rng_new(seed);
 
+	/*Calcolo dell'intervallo di sequenza che deve generare ogni rank*/
 	unsigned long seq_per_thread = ceil((float)seq_length / num_thread);
 	unsigned long seq_start = rank * (seq_per_thread);
+
+	/*Generazione della sequenza e ALLReduce per far ottenere ad ogni rank la sequenza completa*/
 	generate_rng_sequence_parallel(&random, prob_G, prob_C, prob_A, sequence, seq_length, seq_start, seq_per_thread);
 	MPI_Allreduce(MPI_IN_PLACE, sequence, seq_length, MPI_CHAR, MPI_SUM, MPI_COMM_WORLD);
 
@@ -423,7 +428,6 @@ int main(int argc, char *argv[])
 #endif // DEBUG
 
 	/* 2.3.2. Other results related to the main sequence */
-	// Successivamente verrà fatta una Reduce su seq_matches
 	int *seq_matches;
 	seq_matches = (int *)calloc(sizeof(int), seq_length);
 	if (seq_matches == NULL)
@@ -433,11 +437,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* 4. Initialize ancillary structures */
-	// Ogni rank calcola la parte di pattern su cui iterare
+	/* Calcolo dell'intervallo di pattern che ogni rank dovrà considerare*/
 	int pat_per_thread = ceil((float)pat_number / num_thread);
 	int pat_start = rank * (pat_per_thread);
 	int pat_end = pat_start + pat_per_thread + 1 < pat_number ? pat_start + pat_per_thread : pat_number;
 
+	/*Ai fini di poter eseguire una Reduce su pat_found, è necessario che ogni rank imposti i 
+	pattern su cui non deve operare uguali a zero nell'array pat_found*/
 	for (ind = 0; ind < pat_number; ind++)
 	{
 		if (pat_start <= ind && ind < pat_end)
@@ -449,7 +455,7 @@ int main(int argc, char *argv[])
 	/* 5. Search for each pattern */
 	unsigned long start;
 	int pat;
-
+	/*intervallo su cui iterare relativo al rank*/
 	for (pat = pat_start; pat < pat_end; pat++)
 	{
 
@@ -467,7 +473,6 @@ int main(int argc, char *argv[])
 			/* 5.1.2. Check if the loop ended with a match */
 			if (lind == pat_length[pat])
 			{
-				// Successivamente verrà fatta una AllReduce che sommi pat_matches
 				pat_matches++;
 				pat_found[pat] = start;
 				break;
@@ -482,6 +487,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/*Le relative reduce per far si che il rank 0 abbia gli array con i risultati finali*/
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : pat_found, pat_found, pat_number, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : seq_matches, seq_matches, seq_length, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &pat_matches, &pat_matches, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -489,7 +495,6 @@ int main(int argc, char *argv[])
 	/* 7. Check sums */
 	unsigned long checksum_matches = 0;
 	unsigned long checksum_found = 0;
-	// Questa cosa deve farla solo il rank zero
 	if (rank == 0)
 	{
 		for (ind = 0; ind < pat_number; ind++)

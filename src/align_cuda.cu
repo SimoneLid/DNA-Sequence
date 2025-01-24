@@ -62,29 +62,11 @@ double cp_Wtime()
  * DO NOT USE OpenMP IN YOUR CODE
  *
  */
+
 /* ADD KERNELS AND OTHER FUNCTIONS HERE */
-__global__ void readSeq(char *d_sequence, int seq_length)
-{
-	for (int i = 0; i < seq_length; i++)
-	{
-		printf("%c", d_sequence[i]);
-	}
-	printf("\n");
-}
-__global__ void readPattern(char **d_pattern, int pat_length)
-{
-	for (int i = 0; i < pat_length; i++)
-	{
-		printf("%c", d_pattern[0][i]);
-	}
-	printf("\n");
-}
-
-/*
- * Function: Increment the number of pattern matches on the sequence positions
- * 	This function can be changed and/or optimized by the students
- */
-
+/* La funzione increment_matches è stata resa una funzione kernel dato che 
+deve essere eseguita dalla GPU, e viene richiamata esclusivamente all'interno 
+della funzione search_for_patterns (a sua volta kernel)*/
 __device__ void increment_matches(int pat, unsigned long *pat_found, unsigned long *pat_length, int *seq_matches)
 {
 	unsigned long ind;
@@ -93,18 +75,19 @@ __device__ void increment_matches(int pat, unsigned long *pat_found, unsigned lo
 		seq_matches[pat_found[pat] + ind]++;
 	}
 }
+/*La funzione principale del programma (ossia la ricerca vera e propria dei pattern) è 
+stata resa una funzione kernel. I pattern verranno suddivisi fra i vari thread*/
 __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_length, unsigned long *pat_length, char *sequence, char **pattern, unsigned long *pat_found, int **seq_matches_array, int *pat_matches_device)
 {
-	int counter2 = 0;
-	int counter = 0;
+	/*calcolo dell'identificatore univoco di ogni thread*/
 	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+
 	int num_thread = gridDim.x * blockDim.x;
 
+	/*calcolo dell'intervallo di pattern che ogni thread deve ricercare*/
 	int pat_per_thread = ceil((float)pat_number / num_thread);
 	int pat_start = thread_id * (pat_per_thread);
 	int pat_end = pat_start + pat_per_thread < pat_number ? pat_start + pat_per_thread : pat_number;
-
-	// printf("sono il thread %d e ho il range [%d, %d]\n", thread_id, pat_start, pat_end);
 
 	for (int i = 0; i < pat_number; i++)
 	{
@@ -117,8 +100,6 @@ __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_
 	unsigned long lind;
 	for (pat = pat_start; pat < pat_end; pat++)
 	{
-		// printf("pat_lenght[%d]=%ld\n", pat, pat_length[pat]);
-
 		/* 5.1. For each posible starting position */
 		for (start = 0; start <= seq_length - pat_length[pat]; start++)
 		{
@@ -140,17 +121,12 @@ __global__ void search_for_patterns(unsigned long pat_number, unsigned long seq_
 		}
 
 		/* 5.2. Pattern found */
-		counter2++;
 		if (pat_found[pat] != (unsigned long)NOT_FOUND)
 		{
 			/* 4.2.1. Increment the number of pattern matches on the sequence positions */
-			// printf("DENTRO IL FOR %d : %d\n", thread_id, seq_matches_array[thread_id]);
-			counter++;
 			increment_matches(pat, pat_found, pat_length, seq_matches_array[thread_id]);
 		}
 	}
-	// printf("id : %d  counter 1 : %d  counter 2 : %d \n", thread_id, counter, counter2);
-	//  printf("thread %d pat matches : %d\n", thread_id, pat_matches_device[thread_id]);
 }
 /*
  *
@@ -484,41 +460,24 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\n-- Error allocating the sequence for size: %lu\n", seq_length);
 		exit(EXIT_FAILURE);
 	}
+	/*Ogni thread dovrà avere la sua versione privata di pat_matches*/
 	int *pat_matches_host = (int *)malloc(sizeof(int) * thread_block_dim * thread_grid_dim);
 
-	int *pat_matches_device; //(int *)malloc(sizeof(int) * thread_block_dim * thread_grid_dim);
-
+	int *pat_matches_device; 
 	cudaMalloc((void **)&pat_matches_device, sizeof(int *) * thread_block_dim * thread_grid_dim);
-	unsigned long *d_pat_number;
 
-	// Allocazione della memoria sul device
-	CUDA_CHECK_FUNCTION(cudaMalloc(&d_pat_number, sizeof(unsigned long)));
-
-	// Copia del numero dall'host al device
-	CUDA_CHECK_FUNCTION(cudaMemcpy(d_pat_number, &pat_number, sizeof(unsigned long), cudaMemcpyHostToDevice));
-
-	unsigned long *d_seq_lenght;
-
-	// Allocazione della memoria sul device
-	CUDA_CHECK_FUNCTION(cudaMalloc(&d_seq_lenght, sizeof(unsigned long)));
-
-	// Copia del numero dall'host al device
-	CUDA_CHECK_FUNCTION(cudaMemcpy(d_seq_lenght, &seq_length, sizeof(unsigned long), cudaMemcpyHostToDevice));
-
+	/*la generazione avviene in maniera sequenziale*/
 	random = rng_new(seed);
 	generate_rng_sequence(&random, prob_G, prob_C, prob_A, sequence, seq_length);
+
+	/*Allocazione della sequenza sulla memoria video*/
 	char *d_sequence;
-	unsigned long *d_pat_found;
 	CUDA_CHECK_FUNCTION(cudaMalloc(&d_sequence, sizeof(char *) * seq_length));
 	CUDA_CHECK_FUNCTION(cudaMemcpy(d_sequence, sequence, seq_length, cudaMemcpyHostToDevice));
+
+	/*Allocazione dell'array pat_found sulla memoria video*/
+	unsigned long *d_pat_found;
 	CUDA_CHECK_FUNCTION(cudaMalloc(&d_pat_found, sizeof(unsigned long *) * pat_number));
-	// Ogni CUDAcore deve impostare a -1 la sua porzione di d_pat_found
-
-	// CUDA_CHECK_FUNCTION(cudaMemcpy(d_pat_found, pat_found, pat_number, cudaMemcpyHostToDevice));
-	//   readSeq<<<1, 1>>>(d_sequence, seq_length);
-	//   readPattern<<<1, 1>>>(d_pattern, pat_length[0]);
-
-	// CUDA_CHECK_FUNCTION();
 
 #ifdef DEBUG
 	/* DEBUG: Print sequence and patterns */
@@ -542,9 +501,6 @@ int main(int argc, char *argv[])
 	/* 2.3.2. Other results related to the main sequence */
 	int *seq_matches;
 	seq_matches = (int *)calloc(sizeof(int), seq_length);
-	int *d_seq_matches;
-
-	CUDA_CHECK_FUNCTION(cudaMalloc(&d_seq_matches, sizeof(int *) * seq_length));
 
 	if (seq_matches == NULL)
 	{
@@ -552,6 +508,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/*Ogni thread dovrà avere la sua versione di seq_matches sulla memoria video, si crea quindi un array 
+	di array di interi a tal proposito*/
 	int **seq_matches_array_in_host = (int **)calloc(sizeof(int *) * thread_block_dim, thread_grid_dim);
 	int **seq_matches_array_in_device;
 	CUDA_CHECK_FUNCTION(cudaMalloc(&seq_matches_array_in_device, sizeof(int *) * thread_block_dim * thread_grid_dim));
@@ -565,50 +523,49 @@ int main(int argc, char *argv[])
 		CUDA_CHECK_FUNCTION(cudaMalloc(&(seq_matches_array_in_host[ind]), sizeof(int *) * seq_length));
 	}
 	CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches_array_in_device, seq_matches_array_in_host, thread_block_dim * thread_grid_dim * sizeof(int *), cudaMemcpyHostToDevice));
-	cudaDeviceSynchronize();
+	CUDA_CHECK_FUNCTION(cudaDeviceSynchronize());
+
+
 	/* 5. Search for each pattern */
 	search_for_patterns<<<thread_grid_dim, thread_block_dim>>>(pat_number, seq_length, d_pat_length, d_sequence, d_pattern, d_pat_found, seq_matches_array_in_device, pat_matches_device);
 
-	//  identifies<<<100, 40>>>();
-	cudaDeviceSynchronize();
+	CUDA_CHECK_FUNCTION(cudaDeviceSynchronize());
 
+	/*I risultati ottenuti (salvati sulla memoria video) vengono trasferiti sulla memoria dell'host*/
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_found, d_pat_found, pat_number * sizeof(unsigned long), cudaMemcpyDeviceToHost));
 	CUDA_CHECK_FUNCTION(cudaMemcpy(pat_matches_host, pat_matches_device, thread_block_dim * thread_grid_dim * sizeof(int), cudaMemcpyDeviceToHost));
 
+	/*viene eseguita la riduzione delle copie private di seq_matches in un'unico array*/
 	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
 	{
-		// printf("pointer %d : %d \n", i, seq_matches_array_in_host[i]);
 		int *seq_matches_tmp = (int *)calloc(sizeof(int), seq_length);
 		CUDA_CHECK_FUNCTION(cudaMemcpy(seq_matches_tmp, seq_matches_array_in_host[i], seq_length * sizeof(int), cudaMemcpyDeviceToHost));
-		// printf("ID : %d = ", i);
 		for (unsigned long j = 0; j < seq_length; j++)
 		{
-			// printf("%d ", seq_matches_tmp[j]);
 			seq_matches[j] += seq_matches_tmp[j];
 		}
-		// printf("\n");
 	}
 
+	/*viene eseguita la riduzione su pat_matches*/
 	for (int i = 0; i < thread_block_dim * thread_grid_dim; i++)
 	{
 		pat_matches += pat_matches_host[i];
 	}
 
+	/*pulizia della memoria allocata sulla GPU*/
 	CUDA_CHECK_FUNCTION(cudaFree(d_pat_length));
 	CUDA_CHECK_FUNCTION(cudaFree(d_pattern));
 	CUDA_CHECK_FUNCTION(cudaFree(pat_matches_device));
-	CUDA_CHECK_FUNCTION(cudaFree(d_pat_number));
 	CUDA_CHECK_FUNCTION(cudaFree(d_sequence));
 	CUDA_CHECK_FUNCTION(cudaFree(d_pat_found));
-	CUDA_CHECK_FUNCTION(cudaFree(d_seq_matches));
 	CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_device));
-	for (int i = 0; i < seq_length; i++)
+	for (unsigned long i = 0; i < seq_length; i++)
 	{
-		// CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_host[i]));
+		CUDA_CHECK_FUNCTION(cudaFree(seq_matches_array_in_host[i]));
 	}
 	for (int i = 0; i < pat_number; i++)
 	{
-		// CUDA_CHECK_FUNCTION(cudaFree(d_pattern_in_host[i]));
+		CUDA_CHECK_FUNCTION(cudaFree(d_pattern_in_host[i]));
 	}
 
 	/* 7. Check sums */
@@ -674,6 +631,8 @@ int main(int argc, char *argv[])
 	free(pattern);
 	free(pat_length);
 	free(pat_found);
+	free(d_pattern_in_host);
+	free(seq_matches_array_in_host);
 
 	/* 11. End */
 	return 0;
