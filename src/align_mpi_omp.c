@@ -417,7 +417,7 @@ int main(int argc, char *argv[])
 		MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	}
 	
-
+	// Genera la sequenza in parallelo e la manda a tutti i processi
 	generate_rng_sequence_parallel(seed, prob_G, prob_C, prob_A, sequence, seq_length, rank, num_process);
 	MPI_Allreduce(MPI_IN_PLACE, sequence, seq_length, MPI_CHAR, MPI_SUM, MPI_COMM_WORLD);
 
@@ -461,8 +461,9 @@ int main(int argc, char *argv[])
 	{
 		pat_found[ind] = (unsigned long)NOT_FOUND;
 	}
+	
+	
 	/* 5. Search for each pattern */
-
 #pragma omp parallel
 	{
 		int pat_matches_private = 0;
@@ -473,7 +474,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "\n-- Error allocating aux sequence structures for size: %lu\n", seq_length);
 			exit(EXIT_FAILURE);
 		}
-		//printf("Rank:%d Thread id:%d int:[%d,%d]\n",rank,omp_get_thread_num(),pat_start,pat_end);
+		
 
 		unsigned long start;
 		int pat;
@@ -516,8 +517,10 @@ int main(int argc, char *argv[])
 				seq_matches[i] += seq_matches_private[i];
 			}
 		}
+		free(seq_matches_private);
 	}
 
+	// Somma delle varie strutture
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : pat_found, pat_found, pat_number, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : seq_matches, seq_matches, seq_length, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &pat_matches, &pat_matches, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);

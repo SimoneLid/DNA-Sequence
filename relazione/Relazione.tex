@@ -59,12 +59,13 @@
 %FINE PRIMA PAGINA
 
 \section{Introduzione}
-Le parti principali di codice da parallelizzare sono la creazione della sequenza e la ricerca dei pattern. Per sequenze medio-piccole quest'ultima compone la maggior parte del tempo di compilazione, mentre aumentando la grandezza della sequenza (nell'ordine dei miliardi), la maggior parte del tempo è richiesto per generare la sequenza. Da notare che nel programma sequenziale il tempo non conta la generazione di quest'ultima mentre nei programmi paralleli (MPI, OpenMP, CUDA e MPI+OpenMP) si, cosa che causa una diminuzione dello speedup.
-\subsection{Test e calcolo dello speedup}
-Le varie versioni del programma sono state testate sul cluster eseguendo 10 test e controllando il tempo medio di essi, scartando dal calcolo della media il caso peggiore ed il caso migliore, in particolare il test è stato eseguito con i seguenti parametri:
+Le parti principali di codice da parallelizzare sono la creazione della sequenza e la ricerca dei pattern. Per sequenze medio-piccole quest'ultima compone la maggior parte del tempo di compilazione, mentre aumentando la grandezza della sequenza (nell'ordine dei miliardi), la maggior parte del tempo è richiesto per generare la sequenza. Da notare che nel programma sequenziale il tempo non conta la generazione di quest'ultima mentre nei programmi paralleli (MPI, OpenMP, CUDA e MPI+OpenMP) si, cosa che causa una diminuzione dello speed up.
+\subsection{Test e calcolo dello speed up}
+Le varie versioni del programma sono state testate sul cluster eseguendo 10 test e controllando il tempo medio di essi, scartando dal calcolo della media il caso peggiore ed il caso migliore, per evitare che la media venga modificata troppo da esecuzioni con tempi molto più alti o bassi rispetto alle altre. In particolare il test è stato eseguito con i seguenti parametri:
 \begin{center}
     \texttt{500000 0.35 0.2 0.25 30000 2000 1000 30000 2000 1000 500 100 M 4353435}
 \end{center}
+L'esecuzione del codice sequenziale ha richiesto 71.27 secondi.
 
 \newpage
 \section{MPI}
@@ -82,14 +83,14 @@ Di seguito si può vedere il grafico dei tempi e dello speed up in relazione al 
     \includegraphics[width=0.48\textwidth ]{images/tempi_MPI.pdf}
     \includegraphics[width=0.48\textwidth ]{images/speedup_MPI.pdf}
 \end{center}
-L'esecuzione sequenziale (non riportata nel grafico) ha impiegato 71.27 secondi.
+
 \newpage
 Se si vogliono consultare le informazioni in maniera più pratica, si può controllare la seguente tabella:
 \begin{center}
     \begin{tabular}{|c|c|c|c|}
         \hline
         \rowcolor[HTML]{EFEFEF} 
-        numero di processi & tempo   & speedup & efficienza   \\ \hline
+        numero processi & tempo   & speed up & efficienza   \\ \hline
         sequenziale      & 71.27 & 1         & 1 \\ \hline
         32               & 2.71  & 26.27 & 0.82 \\ \hline
         64               & 1.57   & 45.07 & 0.70 \\ \hline
@@ -101,7 +102,7 @@ Se si vogliono consultare le informazioni in maniera più pratica, si può contr
         256              & 1.16  & 61.32  & 0.23 \\ \hline
     \end{tabular}
 \end{center}
-\textbf{Nota} : il tempo medio per l'esecuzione con 256 rank risulta maggiore al tempo medio con 96 rank, anche se il caso migliore risulta più rapido, non è chiaro se l'aleatoreità delle differenze di tempo fra differenti esecuzioni del programma sia dovuta al sovraccarico del cluster,è riportato il grafico dei tempi nei \textit{casi migliori}:
+\textbf{Nota} : il tempo medio per l'esecuzione con 256 rank risulta maggiore al tempo medio con 96 rank, anche se il caso migliore risulta più rapido, non è chiaro se l'aleatoreità delle differenze di tempo fra differenti esecuzioni del programma sia dovuta al sovraccarico del cluster. In seguito è riportato il grafico dei tempi nei \textit{casi migliori}:
 \begin{center}
     \includegraphics[width=0.6\textwidth ]{images/tempi_MPI_bestcase.pdf}
 \end{center}
@@ -115,12 +116,12 @@ Nel programma OpenMP per quanto riguarda la ricerca dei pattern abbiamo creato d
 \bigskip
 
 Dopo il ciclo \texttt{for} relativo alla ricerca dei pattern ogni thread avrà operato sulle proprie copie private di \texttt{pat\_matches} e \texttt{seq\_matches}. Sarà necessario collossare i risultati parziali ottenuti da ogni thread, sommandone i valori.
-A tal proposito, sarà necessario sequenziare una porzione di codice con la direttiva \texttt{\#pragma omp critical}, in cui ogni thread sommerà i valori di \texttt{pat\_matches} e \texttt{seq\_matches} per avere i valori finali corretti.\bigskip
+A tal proposito, sarà necessario eseguire una porzione di codice in modo sequenziale con la direttiva \texttt{\#pragma omp critical}, in cui ogni thread sommerà i propri valori di \texttt{pat\_matches} e \texttt{seq\_matches} per avere i valori finali corretti.\bigskip
 
-Per quanto riguarda invece la creazione della sequenza abbiamo usato lo stesso approccio di MPI, cioè dividerla in parti uguali in base all'id del thread e far eseguire ad ogni thread \texttt{rng\_skip} fino al punto dove deve iniziare a generare i propri numeri random. Per impostare il numero di thread è stato aggiunto un argomento in input, in modo da poterli impostare da linea di comando.\bigskip
+Per quanto riguarda invece la creazione della sequenza abbiamo usato lo stesso approccio di MPI, cioè dividerla in parti uguali in base all'id del thread e far eseguire ad ogni thread \texttt{rng\_skip} fino al punto dove deve iniziare a generare i propri numeri random. Per impostare il numero di thread è stato aggiunto un argomento in input, in modo da poterli impostare da linea di comando (l'argomento aggiuntivo è utile solo per i test, non modifica la logica del codice).\bigskip
 
 
-Di seguito si può vedere il grafico dei tempi e dello speedup in relazione al numero di thread, i test sono stati eseguiti aumentando il numero di thread progressivamente:
+Di seguito si può vedere il grafico dei tempi e dello speed up in relazione al numero di thread, i test sono stati eseguiti aumentando il numero di thread progressivamente:
 \begin{center}
     \includegraphics[width=0.5\textwidth ]{images/tempi_OpenMP.pdf}\includegraphics[width=0.5\textwidth ]{images/speedup_OpenMP.pdf}
 \end{center}
@@ -129,7 +130,7 @@ Si osservi come la decrescita del tempo impiegato a terminare il programma è in
     \begin{tabular}{|c|c|c|c|}
         \hline
         \rowcolor[HTML]{EFEFEF} 
-        numero di  thread & tempo & speedup & efficienza\\ \hline
+        numero thread & tempo & speed up & efficienza\\ \hline
         sequenziale       & 71.27 & 1       & 1 \\ \hline
         2                 & 36.94 & 1.92    & 0.96 \\ \hline
         4                 & 18.62 & 3.82    & 0.95 \\ \hline
@@ -143,15 +144,16 @@ Si noti come a parità di processi (nel caso con 32 thread), l'esecuzione parall
 
 \newpage 
 \section{CUDA}
-In CUDA, la logica della parallelizzazione è la medesima, si presenta però un problema non di poco conto\begin{itemize}
-    \item Nelle implementazioni MPI ed OpenMP, ogni thread possiede una copia privata degli array \texttt{seq\_matches} e \texttt{pat\_found}. Il numero dei thread è nell'ordine delle centinaia, quindi, ciò non causa problemi dal punto di vista della memoria anche quando gli array sono di grandi dimensioni, inoltre, essendo eseguiti sulla CPU, c'è la possibilità di fare paginazione
-    \item nel caso di CUDA, i CUDAcores sono nell'ordine delle migliaia, e la memoria della GPU è limitata, quindi in caso di grandi dimensioni per gli array prima menzionati, vi è il rischio che la memoria venga esaurita
+In CUDA, la logica della parallelizzazione per quanto riguarda la ricerca dei pattern è la medesima, si presenta però un problema non di poco conto:
+\begin{itemize}
+    \item Nelle implementazioni MPI ed OpenMP, ogni thread possiede una copia privata degli array \texttt{seq\_matches} e \texttt{pat\_found}. Il numero dei thread/processo MPI è nell'ordine delle centinaia, quindi, ciò non causa problemi dal punto di vista della memoria anche quando gli array sono di grandi dimensioni, inoltre, essendo eseguiti sulla CPU, c'è la possibilità di fare paginazione.
+    \item Nel caso di CUDA, i CUDAcores sono nell'ordine delle migliaia, e la memoria della GPU è limitata, quindi in caso di grandi dimensioni per gli array prima menzionati, vi è il rischio che la memoria venga esaurita.
 \end{itemize} 
 A tal proposito, piuttosto che fornire ad ogni thread una versione locale di  \texttt{seq\_matches} e \texttt{pat\_found}, è possibile avere una versione globale condivisa, su cui la scrittura deve essere resa sequenziale per evitare race condition. È stata tentata un'implementazione di questo tipo, ma la sequenzializzazione della scrittura comporta un'abbassamento delle performance notevole, rendendo il programma ben più lento della versione sequenziale.\bigskip 
 
 È stata quindi adoperata la versione in cui ogni thread ha una versione privata degli array, dato che la memoria disponibile è sufficiente a permettere l'esecuzione del programma sugli input utilizzati per i test da noi adottati.\bigskip 
 
-Di seguito si può vedere il grafico dei tempi e dello speedup in relazione al numero di thread, i test sono stati eseguiti aumentando progressivamente il numero di blocchi nella griglia, mantenendo costante il numero di thread nel blocco (precisamente, 64):
+Di seguito si può vedere il grafico dei tempi e dello speed up in relazione al numero di thread, i test sono stati eseguiti aumentando progressivamente il numero di blocchi nella griglia, mantenendo costante il numero di thread nel blocco (precisamente, 64):
 \begin{center}
     \includegraphics[width=0.42\textwidth ]{images/tempiCUDA.pdf}
     \includegraphics[width=0.53\textwidth ]{images/speedupCUDA.pdf}
@@ -161,8 +163,8 @@ Come nel caso di MPI, ad un certo punto l'aggiunta di thread non causa alcun ben
     \begin{tabular}{|c|c|c|}
         \hline
         \rowcolor[HTML]{EFEFEF} 
-        numero di thread & tempo     & speedup \\ \hline
-        sequenziale      & 71.273433 & 1       \\ \hline
+        numero thread & tempo     & speed up \\ \hline
+        sequenziale      & 71.27     & 1       \\ \hline
         256              & 40.43     & 1.76    \\ \hline
         512              & 14.31     & 4.98    \\ \hline
         1024             & 11.99     & 5.98    \\ \hline
@@ -172,50 +174,56 @@ Come nel caso di MPI, ad un certo punto l'aggiunta di thread non causa alcun ben
 \end{center}
 \newpage 
 \section{MPI + OpenMP}
-Per l'implementazione mista, abbiamo adottato la seguente procedura\begin{itemize}
-    \item Ogni nodo sul cluster avvia un processo MPI 
-    \item Per ogni nodo, quindi per ogni processo MPI, ci sono più thread openMP (che verranno parallelamente schedulati sui diversi core del processore presente sul nodo)
+Per l'implementazione mista, abbiamo adottato la seguente procedura:
+\begin{itemize}
+    \item Ogni nodo sul cluster avvia un processo MPI.
+    \item Per ogni nodo, quindi per ogni processo MPI, ci sono più thread openMP (che verranno parallelamente schedulati sui diversi core del processore presente sul nodo).
 \end{itemize}
-Su ogni nodo, i thread condivideranno una versione locale di \texttt{pat\_found}, le riduzioni quindi, avverranno fra nodi differenti, si noti come \begin{itemize}
-    \item nella versione MPI, se ci sono 32 rank, la riduzione coinvolgerà 32 array 
-    \item nella versione MPI+OpenMP, ad esempio, con 8 rank e thread per processo, la riduzione coinvolgerà solamente 8 array (presenti sui differenti nodi)
+Su ogni nodo, i thread condivideranno una versione locale di \texttt{pat\_found}, le riduzioni quindi, avverranno fra nodi differenti. Si noti come:
+\begin{itemize}
+    \item Nella versione MPI, se ci sono 32 rank, la riduzione coinvolgerà 32 array.
+    \item Nella versione MPI+OpenMP, ad esempio, con 8 rank e 32 thread per processo, la riduzione coinvolgerà solamente 8 array (presenti sui differenti nodi).
 \end{itemize}
-Sono state eseguite due trance differenti di test\begin{itemize}
-    \item nella prima trance, si è lasciato fisso il numero di thread OpenMP a 32, e si è aumentato progressivamente il numero di nodi (rank MPI)
-    \item nella seconda trance, sono stati fissati 8 nodi (rank MPI), e sono stati variati i thread OpenMP
+Sono state eseguite due serie differenti di test:
+\begin{itemize}
+    \item Nella prima serie, si è lasciato fisso il numero di thread OpenMP a 32, e si è aumentato progressivamente il numero di nodi (rank MPI).
+    \item Nella seconda serie, sono stati fissati 8 nodi (rank MPI) e sono stati variati i thread OpenMP.
 \end{itemize}
-La progressione del numero dei thread totali è identica fra le due trance. In seguito sono riportati i grafici dei tempi delle due trance:
+La progressione del numero dei thread totali è identica fra le due serie. In seguito sono riportati i grafici dei tempi delle due serie:
 \begin{center}
     \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_M.pdf}
     \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_T.pdf}
 \end{center}
-I due grafici a confronto, in blu la seconda trance, in arancione la prima:
+I due grafici a confronto, in blu la seconda serie, in arancione la prima:
 \begin{center}
     \includegraphics[width=0.48\textwidth ]{images/tempi_MISTO_MT.pdf}
 \end{center}
-È riportato ora il grafico dello speedup
+È riportato ora il grafico dello speed up:
 \begin{center}
     \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_M.pdf}
     \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_T.pdf}
 \end{center}
-I due grafici a confronto, in blu la seconda trance, in arancione la prima:
+I due grafici a confronto, in blu la seconda serie, in arancione la prima:
 \begin{center}
     \includegraphics[width=0.48\textwidth ]{images/speedup_MISTO_MT.pdf}
 \end{center}
-È riportata la tabella dei tempi e dello speed up:\begin{center}
-    \begin{tabular}{|c|c|c|c|c|}
+È riportata la tabella dei tempi e dello speed up:
+\begin{center}
+    \begin{tabular}{|c|c|c|c|c|c|c|}
         \hline
         \rowcolor[HTML]{EFEFEF} 
-        numero totale thread & tempo trance 1 & \cellcolor[HTML]{EFEFEF}tempo trance 2 & speed up trance 1 & speed up trance 2 \\ \hline
-        sequenziale          & 71.273433      & 71.273433                              & 1                 & 1                 \\ \hline
-        32                   & 3.442785       & 2.536871                               & 20.701264         & 28.093663         \\ \hline
-        64                   & 1.808318       & 1.328219                               & 39.412316         & 53.65832          \\ \hline
-        96                   & 1.264207       & 1.000262                               & 56.375261         & 71.251332         \\ \hline
-        128                  & 1.088805       & 0.840287                               & 65.457084         & 84.816259         \\ \hline
-        160                  & 0.854102       & 0.748569                               & 83.444366         & 95.208324         \\ \hline
-        192                  & 0.755196       & 0.668694                               & 94.372852         & 106.580888        \\ \hline
-        224                  & 0.698206       & 0.751871                               & 102.075892        & 94.790197         \\ \hline
-        256                  & 0.646928       & 0.646928                               & 110.166819        & 110.166819        \\ \hline
+        numero thread & tempo 1 & tempo 2 & speed up 1 & speed up 2 & efficienza 1 & efficienza 2\\ \hline
+        sequenziale          & 71.27      & 71.27                              & 1                 & 1       & 1 &1          \\ \hline
+        32                   & 3.44       & 2.53                               & 20.70         & 28.09   & 0.64&0.87      \\ \hline
+        64                   & 1.80       & 1.32                              & 39.41         & 53.65    &0.61&0.83      \\ \hline
+        96                   & 1.26       & 1.00                              & 56.37         & 71.25    & 0.58&0.74     \\ \hline
+        128                  & 1.08       & 0.84                               & 65.45         & 84.81   &0.51&0.66      \\ \hline
+        160                  & 0.85       & 0.74                               & 83.44         & 95.20   &0.52&0.59      \\ \hline
+        192                  & 0.75       & 0.66                               & 94.37         & 106.58  &0.49&0.55      \\ \hline
+        224                  & 0.69       & 0.75                               & 102.07        & 94.79   &0.45&0.42      \\ \hline
+        256                  & 0.64       & 0.64                            & 110.16        & 110.16     &0.43&0.43   \\ \hline
         \end{tabular}
 \end{center}
+
+Possiamo notare quindi che in media l'implementazione più veloce a parità del numero di thread totali sia MPI+OpenMP.
 \end{document}

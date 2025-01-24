@@ -80,6 +80,8 @@ void generate_rng_sequence(rng_t *random, float prob_G, float prob_C, float prob
 			seq[ind] = 'T';
 	}
 }
+
+// Generazione della sequenza in parallelo
 void generate_rng_sequence_parallel(unsigned long seed, float prob_G, float prob_C, float prob_A, char *seq, unsigned long length)
 {
 #pragma omp parallel
@@ -398,8 +400,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\n-- Error allocating the sequence for size: %lu\n", seq_length);
 		exit(EXIT_FAILURE);
 	}
-
-	// random = rng_new(seed);
 	generate_rng_sequence_parallel(seed, prob_G, prob_C, prob_A, sequence, seq_length);
 
 #ifdef DEBUG
@@ -430,14 +430,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-/* 4. Initialize ancillary structures */
+	/* 4. Initialize ancillary structures */
 #pragma omp parallel for
 	for (ind = 0; ind < pat_number; ind++)
 	{
 		pat_found[ind] = (unsigned long)NOT_FOUND;
 	}
+	
+	
 	/* 5. Search for each pattern */
-
 #pragma omp parallel
 	{
 		int pat_matches_private = 0;
@@ -453,7 +454,6 @@ int main(int argc, char *argv[])
 #pragma omp for
 		for (pat = 0; pat < pat_number; pat++)
 		{
-			// printf("rank : %d pat : %d\n", omp_get_thread_num(), pat);
 
 			/* 5.1. For each possible starting position */
 			for (start = 0; start <= seq_length - pat_length[pat]; start++)
@@ -482,8 +482,8 @@ int main(int argc, char *argv[])
 				increment_matches(pat, pat_found, pat_length, seq_matches_private);
 			}
 		}
-		// #pragma omp for reduction(+ : seq_matches[ : seq_length])
 
+		// Somma di tutti i pat_matches e seq_matches privati
 #pragma omp critical
 		{
 			pat_matches += pat_matches_private;
@@ -492,6 +492,7 @@ int main(int argc, char *argv[])
 				seq_matches[i] += seq_matches_private[i];
 			}
 		}
+		free(seq_matches_private);
 	}
 	
 
